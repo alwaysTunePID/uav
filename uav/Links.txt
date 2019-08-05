@@ -1,0 +1,3 @@
+Bra länkar att ha.
+
+https://www.quora.com/What-is-rate-and-stabilize-PID-in-quadcopter-control

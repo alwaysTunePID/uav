@@ -44,6 +44,7 @@ int telemetry_main(int uart_bus)
 
     while (rc_get_state() != EXITING)
     {
+
         if (get_latest_pvt(&latest_pvt))
         {
             LOG_E("Failed to get gps data");

@@ -11,10 +11,15 @@ FILE * dsm_log;
 
 // create a buffer and a data type which we will put on the buffer
 cbuffer_handle_t dsm_buffer;
+
+
+/*
 typedef struct dsm_entry{
-    uint64_t time_ns;
-    int channels[NUM_CHANNELS];
+	uint64_t time_ns;
+	double channels[NUM_CHANNELS];
 } dsm_entry_t;
+*/
+
 
 dsm_entry_t dsm_entry;
 
@@ -54,7 +59,7 @@ int log_dsm(){
     }
 
 
-    fprintf(dsm_log,"%llu, %d, %d, %d, %d, %d, %d, %d, %d;\n",
+    fprintf(dsm_log,"%llu, %f, %f, %f, %f, %f, %f, %f, %f;\n",
             d.time_ns,
             d.channels[0],
             d.channels[1],
@@ -68,19 +73,33 @@ int log_dsm(){
     return 0;
 }
 
+// function for getting latest dsm entry. DID NOT WORK
+// int get_latest_dsm(dsm_entry_t* dsm)
+//  {
+// 	if (dsm_buffer != NULL)
+// 	{
+// 		if (cbuffer_top(dsm_buffer, dsm))
+// 		{
+// 			printf("ERROR: failed to peek DSM buffer\n");
+// 			return -1;
+// 		}
+// 	}
+// 	return 0;
+// }
+
 
 // callback function which is called at every received packet
 void __send_pulses(void)
 {
-    int i, val;
+	int i;
+	double val;
     dsm_entry.time_ns = rc_nanos_since_epoch();
     // send single to working channels
     for(i=1; i<=NUM_CHANNELS; i++){
-        val=rc_dsm_ch_raw(i);
-        if(val>0){
-            rc_servo_send_pulse_us(i,val);
-            dsm_entry.channels[i-1]=val;
-        }
+		val = rc_dsm_ch_normalized(i);
+		//if (val < -0.1) val = -0.1;
+		//if (val > 1.0) val = 1.0;
+		dsm_entry.channels[i - 1] = val;
     }
     // put data in the buffer
     cbuffer_put(dsm_buffer, &dsm_entry);
@@ -88,6 +107,8 @@ void __send_pulses(void)
 }
 
 int dsm_main(){
+
+
     // Pre start of DSM Checks
     if(rc_dsm_init()==-1) return -1;
     if(rc_servo_init()==-1) return -1;
@@ -101,9 +122,14 @@ int dsm_main(){
     dsm_buffer = create_cbuffer();
     cbuffer_init(dsm_buffer,DSM_BUFFER_SIZE ,sizeof(dsm_entry_t));
     init_dsm_log();
+
+	// This could be nice, but
+    // it was probably useless
+	//if (rc_dsm_calibrate_routine()) return -1;
+
     // set callback, we  are now listening and reacting to dsm packets
     rc_dsm_set_callback(&__send_pulses);
-
+	
 
     while(rc_get_state()!=EXITING){
 
@@ -113,6 +139,8 @@ int dsm_main(){
             printf("                             ");
             fflush(stdout);
         }
+
+	
         rc_usleep(2500);
 
     }
@@ -132,5 +160,6 @@ void *dsm_thread_func(){
     {
         rc_set_state(EXITING);
     }
+	
     return (void*)&dsm_thread_ret_val;
 }

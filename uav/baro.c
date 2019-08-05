@@ -89,7 +89,7 @@ int get_latest_baro(bmp_entry_t *baro)
     {
         if(cbuffer_top(bmp_buffer, baro))
         {
-            printf("ERROR: Failed to peek bruffer");
+            printf("ERROR: Failed to peek Baro bruffer");
             return -1;
         }
     }

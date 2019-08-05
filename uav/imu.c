@@ -1,7 +1,11 @@
 #include <stdio.h>
+#include <semaphore.h>
 #include "imu.h"
 #include "circular_buffer.h"
 #define IMU_BUFFER_SIZE   10
+
+
+// Unclear if this works at all
 
 
 rc_mpu_config_t mpu_config; 
@@ -22,7 +26,7 @@ int init_imu_log()
 		printf("Could not open an IMU log file!\n");   
 		return -1;             
    }
-   fprintf(imu_log,"time acc_x acc_y acc_z p q r mag_x mag_y mag_z temp roll pitch yaw\n");
+   fprintf(imu_log,"time acc_x acc_y acc_z p q r mag_x mag_y mag_z temp pitch roll yaw\n");
 	return 0;
 }
 
@@ -35,7 +39,7 @@ int close_imu_log()
 
 
 // IMU/DMP functions
-void sample_imu()
+void sample_imu(sem_t *IMU_sem)
 {
 	rc_mpu_block_until_dmp_data();
   // When this callback is called we know a new set of mpu_data has been sampled
@@ -50,6 +54,7 @@ void sample_imu()
 	
 
 	cbuffer_put(imu_buffer,&imu_entry);
+	sem_post(IMU_sem);
 	
 }
 
@@ -79,6 +84,7 @@ int initialize_imu()
 	mpu_config.enable_magnetometer = 1;
 	mpu_config.dmp_fetch_accel_gyro = 1;
 	mpu_config.dmp_sample_rate = 200;
+   
 	
 	// Initialize with config and pointer to data structure
 	if (rc_mpu_initialize_dmp(&mpu_data,mpu_config))
@@ -115,13 +121,18 @@ int log_imu(){
 	}
    
    
+	// _____________________________ OBS ________________________________________
+	// Change the indices of the arry data that is written in the log file, if no reconfiguration of sensor localization have been made.
+
 	fprintf(imu_log,"%llu, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f;\n",
 	d.time_ns,
 	d.accel[0], d.accel[1], d.accel[2],
-	d.gyro[0], d.gyro[1], d.gyro[2],
+	//d.gyro[0], d.gyro[1], d.gyro[2],
+	-d.gyro[0] * RAD_TO_DEG, -d.gyro[1] * RAD_TO_DEG, -d.gyro[2] * RAD_TO_DEG,
 	d.mag[0], d.mag[1], d.mag[2],
 	d.temp,
-	d.euler[0], d.euler[1], d.euler[2]);
+	-d.euler[0] * RAD_TO_DEG, -d.euler[1] * RAD_TO_DEG, -d.euler[2] * RAD_TO_DEG);
+	//d.euler[0] * RAD_TO_DEG, d.euler[1] * RAD_TO_DEG, d.euler[2] * RAD_TO_DEG);
 	return 0;
 	
 	
@@ -133,7 +144,7 @@ int get_latest_imu(imu_entry_t *imu)
 	{
 	if (cbuffer_top(imu_buffer, imu))
 	{
-		printf("ERROR: failed to peek buffer\n");
+		printf("ERROR: failed to peek IMU buffer\n");
 		return -1;
 	}
 	}

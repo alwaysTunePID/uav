@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <robotcontrol.h> // includes ALL Robot Control subsystems
+#include <semaphore.h>
 #include "gps.h"
 #include "i2c_thread.h"
 #include "dsm_thread.h"
@@ -7,15 +8,21 @@
 #include "telemetry.h"
 #include "battery.h"
 #include "airspeed.h"
+#include "flight_thread.h"
+#include "input_thread.h"
+// threads  
 
-// threads
 static pthread_t i2c_thread;
 static pthread_t dsm_thread;
-static pthread_t gps_thread;
+//static pthread_t gps_thread;
 static pthread_t log_thread;
 static pthread_t battery_thread;
 static pthread_t telemetry_thread;
-static pthread_t airspeed_thread;
+//static pthread_t airspeed_thread;  
+static pthread_t flight_thread;
+//static pthread_t input_thread;
+//static pthread_t test_thread;
+
 
 /**
  * Make the Pause button toggle between paused and running states.
@@ -49,6 +56,7 @@ void on_pause_press()
 
 int main()
 {
+    sem_t IMU_sem;
     int ret;
     void* thread_retval; // return value of the thread
     // make sure another instance isn't running
@@ -63,6 +71,8 @@ int main()
         fprintf(stderr,"ERROR: Failed to start signal handler\n");
         return -1;
     }
+
+    sem_init(&IMU_sem, 0, 0);
 
     // initialize pause button
     if(rc_button_init(RC_BTN_PIN_PAUSE, RC_BTN_POLARITY_NORM_HIGH,
@@ -84,21 +94,23 @@ int main()
 
     //start threads
 
-    if(rc_pthread_create(&i2c_thread, i2c_thread_func, NULL, SCHED_OTHER, 0)){
+	
+     if(rc_pthread_create(&i2c_thread, i2c_thread_func, &IMU_sem, SCHED_OTHER, 0)){
         fprintf(stderr, "ERROR: Failed to start I2C sampler thread\n");
         return -1;
     }
-
+	
     if(rc_pthread_create(&dsm_thread, dsm_thread_func, NULL, SCHED_OTHER, 0)){
         fprintf(stderr, "ERROR: Failed to start DSM thread\n");
         return -1;
     }
-
+	
+    /*
     if(rc_pthread_create(&gps_thread, gps_thread_func, NULL, SCHED_OTHER, 0)){
         fprintf(stderr, "ERROR: Failed to start GPS thread\n");
         return -1;
     }
-
+	*/
     if(rc_pthread_create(&battery_thread, battery_thread_func, NULL, SCHED_OTHER, 0)){
         fprintf(stderr, "ERROR: Failed to start Battery monitor thread\n");
         return -1;
@@ -113,25 +125,36 @@ int main()
         fprintf(stderr, "ERROR: Failed to start LOG thread\n");
         return -1;
     }
-
+    
+	/*
     if(rc_pthread_create(&airspeed_thread, airspeed_thread_func, NULL, SCHED_OTHER, 0)){
         fprintf(stderr, "ERROR: Failed to start AIRSPEED thread\n");
         return -1;
     }
-
+	*/
+	
+	if (rc_pthread_create(&flight_thread, flight_thread_func, &IMU_sem , SCHED_OTHER, 0)) {
+		fprintf(stderr, "ERROR: Failed to start Flight thread\n");
+		return -1;
+	}
+	 
+	/*if (rc_pthread_create(&input_thread, input_thread_func, inputs_pointer, SCHED_OTHER, 0)) {
+		fprintf(stderr, "ERROR: Failed to start input thread\n");
+		return -1;
+	}*/
 
     // Sleep and let threads work
     while(rc_get_state()==RUNNING){
-        rc_usleep(1000);
+        rc_usleep(10000);
     }
-
+	
     // join i2c thread
     ret = rc_pthread_timed_join(i2c_thread, &thread_retval, 1.5);
     if ( ret == 1){
         fprintf(stderr,"ERROR: IMU thread timed out\n");
     }
     printf("I2c thread returned:%d\n",*(int*)thread_retval);
-
+	
     // dsm i2c thread
     ret = rc_pthread_timed_join(dsm_thread, &thread_retval, 1.5);
     if ( ret == 1){
@@ -140,12 +163,13 @@ int main()
     printf("DSM thread returned:%d\n",*(int*)thread_retval);
 
     // join gps thread
+	/*
     ret = rc_pthread_timed_join(gps_thread, &thread_retval, 1.5);
     if ( ret == 1){
         fprintf(stderr,"ERROR: GPS thread timed out\n");
     }
     printf("GPS thread returned:%d\n",*(int*)thread_retval);
-
+	*/
     // join battery thread
     ret = rc_pthread_timed_join(battery_thread, &thread_retval, 1.5);
     if ( ret == 1){
@@ -166,15 +190,30 @@ int main()
         fprintf(stderr,"ERROR: LOG thread timed out\n");
     }
     printf("TELEMETRY thread returned:%d\n",*(int*)thread_retval);
-
+	/*
     // join airspeed thread
     ret = rc_pthread_timed_join(airspeed_thread, &thread_retval, 1.5);
     if ( ret == 1){
         fprintf(stderr,"ERROR: AIRSPEED thread timed out\n");
     }
-    printf("TELEMETRY thread returned:%d\n",*(int*)thread_retval);
+    printf("AIRSPEEL thread returned:%d\n",*(int*)thread_retval);
+	*/
 
 
+	// // join Flight thread
+	ret = rc_pthread_timed_join(flight_thread, &thread_retval, 1.5);
+	if (ret == 1) {
+		fprintf(stderr, "ERROR: Flight thread timed out\n");
+	}
+	printf("Flight thread returned:%d\n", *(int*)thread_retval);
+
+	// ret = rc_pthread_timed_join(input_thread, &thread_retval, 1.5);
+	// if (ret == 1) {
+	// 	fprintf(stderr, "ERROR: Input_thread timed out\n");
+	// }
+	// printf("Test thread returned:%d\n", *(int*)thread_retval);
+
+	
 
     // turn off LEDs and close file descriptors
     rc_led_set(RC_LED_GREEN, 0);
