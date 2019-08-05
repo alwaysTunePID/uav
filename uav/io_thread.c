@@ -6,7 +6,7 @@
 
 
 
-static int input_thread_ret_val;
+static int io_thread_ret_val;
 
 /* void set_K(inputs_t *p, int val) {
     pthread_mutex_lock(&(p->mutex));
@@ -39,10 +39,10 @@ int io_main(void) {
 
 
 void *io_thread_func(void) {
-    input_thread_ret_val = io_main();
-    if (input_thread_ret_val ==-1) {
+    io_thread_ret_val = io_main();
+    if (io_thread_ret_val ==-1) {
         rc_set_state(EXITING);
     }
 	
-    return (void*)&input_thread_ret_val;
+    return (void*)&io_thread_ret_val;
 }
