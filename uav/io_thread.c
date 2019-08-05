@@ -28,7 +28,7 @@ int io_main(void) {
 
 		//Output
 		get_latest_imu(&imu_data);
-		printf("\rTemp: %lf", imu_data.temp);
+		printf("\rAccel: %lf %lf %lf", imu_data.accel[0], imu_data.accel[1], imu_data.accel[2]);
 		fflush(stdout);
 		
         rc_usleep(500000);
