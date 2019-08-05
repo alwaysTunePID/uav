@@ -3,6 +3,6 @@
 
 
 
-void* input_thread_func();
+void* io_thread_func();
 
 #endif //INPUT_THREAD_H

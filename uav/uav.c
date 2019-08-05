@@ -9,7 +9,7 @@
 #include "battery.h"
 #include "airspeed.h"
 #include "flight_thread.h"
-#include "input_thread.h"
+#include "io_thread.h"
 // threads  
 
 static pthread_t i2c_thread;
@@ -20,7 +20,7 @@ static pthread_t battery_thread;
 static pthread_t telemetry_thread;
 //static pthread_t airspeed_thread;  
 static pthread_t flight_thread;
-//static pthread_t input_thread;
+static pthread_t io_thread;
 //static pthread_t test_thread;
 
 
@@ -138,10 +138,10 @@ int main()
 		return -1;
 	}
 	 
-	/*if (rc_pthread_create(&input_thread, input_thread_func, inputs_pointer, SCHED_OTHER, 0)) {
-		fprintf(stderr, "ERROR: Failed to start input thread\n");
+	if (rc_pthread_create(&io_thread, io_thread_func, NULL, SCHED_OTHER, 0)) {
+		fprintf(stderr, "ERROR: Failed to start input/output thread\n");
 		return -1;
-	}*/
+	}
 
     // Sleep and let threads work
     while(rc_get_state()==RUNNING){
@@ -207,11 +207,11 @@ int main()
 	}
 	printf("Flight thread returned:%d\n", *(int*)thread_retval);
 
-	// ret = rc_pthread_timed_join(input_thread, &thread_retval, 1.5);
-	// if (ret == 1) {
-	// 	fprintf(stderr, "ERROR: Input_thread timed out\n");
-	// }
-	// printf("Test thread returned:%d\n", *(int*)thread_retval);
+	ret = rc_pthread_timed_join(io_thread, &thread_retval, 1.5);
+	if (ret == 1) {
+	    fprintf(stderr, "ERROR: Input_thread timed out\n");
+	}
+	printf("Test thread returned:%d\n", *(int*)thread_retval);
 
 	
 

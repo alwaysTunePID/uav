@@ -1,8 +1,8 @@
-#include "input_thread.h"
+#include "io_thread.h"
 #include "uav.h"
+#include "imu.h"
 #include <stdio.h>
 #include <robotcontrol.h>
-#include <imu.h>
 
 
 
@@ -14,8 +14,8 @@ static int input_thread_ret_val;
     pthread_mutex_unlock(&(p->mutex));
 } */
 
-int input_main(inputs_t *inputs) {
-	double K;
+int io_main(void) {
+	// double K;
 	imu_entry_t imu_data;
 
     while (rc_get_state() != EXITING) {
@@ -28,8 +28,8 @@ int input_main(inputs_t *inputs) {
 
 		//Output
 		get_latest_imu(&imu_data);
-		fprintf("\rTemp: %lf", imu_data.temp);
-		fflush();
+		printf("\rTemp: %lf", imu_data.temp);
+		fflush(stdout);
 		
         rc_usleep(500000);
     }
@@ -38,8 +38,8 @@ int input_main(inputs_t *inputs) {
 }
 
 
-void *input_thread_func(void *arg) {
-    input_thread_ret_val = input_main((inputs_t*)arg);
+void *io_thread_func(void) {
+    input_thread_ret_val = io_main();
     if (input_thread_ret_val ==-1) {
         rc_set_state(EXITING);
     }
