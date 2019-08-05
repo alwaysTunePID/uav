@@ -21,7 +21,6 @@ static pthread_t telemetry_thread;
 //static pthread_t airspeed_thread;  
 static pthread_t flight_thread;
 //static pthread_t input_thread;
-//static pthread_t test_thread;
 
 
 /**

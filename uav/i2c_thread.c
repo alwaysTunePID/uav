@@ -9,7 +9,7 @@ static int i2c_thread_ret_val;
 // need to keep functions which sample the i2c buss in the same thread
 int i2c_main(sem_t *IMU_sem){
 
-    if (initialize_baro()) return -1;
+    //if (initialize_baro()) return -1;
     if (initialize_imu() ) return -1;
 
     while(rc_get_state()!=EXITING){
@@ -18,11 +18,12 @@ int i2c_main(sem_t *IMU_sem){
         	sample_imu(IMU_sem);
         	rc_usleep(100);
 	}
-	sample_baro();
+	//sample_baro();
+   
     }
 
     int r1 =finalize_imu();
-    int r2 =finalize_baro();
+    int r2 = 0; //finalize_baro();
     if (r1 || r2) return -1;
 
 
