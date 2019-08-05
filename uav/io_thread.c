@@ -2,7 +2,7 @@
 #include "uav.h"
 #include <stdio.h>
 #include <robotcontrol.h>
-#include <baro.h>
+#include <imu.h>
 
 
 
@@ -16,7 +16,7 @@ static int input_thread_ret_val;
 
 int input_main(inputs_t *inputs) {
 	double K;
-	bmp_entry_t bmp_data;
+	imu_entry_t imu_data;
 
     while (rc_get_state() != EXITING) {
 		//Input
@@ -27,8 +27,8 @@ int input_main(inputs_t *inputs) {
         //printf("K is %lf", K);
 
 		//Output
-		int baro = get_latest_baro(&bmp_data);
-		fprintf("\rBarometer data: %i", baro);
+		get_latest_imu(&imu_data);
+		fprintf("\rTemp: %lf", imu_data.temp);
 		fflush();
 		
         rc_usleep(500000);
