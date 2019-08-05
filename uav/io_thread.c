@@ -2,6 +2,9 @@
 #include "uav.h"
 #include <stdio.h>
 #include <robotcontrol.h>
+#include <baro.h>
+
+
 
 static int input_thread_ret_val;
 
@@ -13,13 +16,21 @@ static int input_thread_ret_val;
 
 int input_main(inputs_t *inputs) {
 	double K;
+	bmp_entry_t bmp_data;
 
     while (rc_get_state() != EXITING) {
+		//Input
         //scanf(" %lf", &K);
         //printf("You passed the first scanf\n");
         //set_K(inputs, K);
         //fflush(stdin);
         //printf("K is %lf", K);
+
+		//Output
+		int baro = get_latest_baro(&bmp_data);
+		fprintf("\rBarometer data: %i", baro);
+		fflush();
+		
         rc_usleep(500000);
     }
 
