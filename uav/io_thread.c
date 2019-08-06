@@ -5,6 +5,13 @@
 #include <robotcontrol.h>
 #include <unistd.h>
 
+#define GREEN "\033[1;32m"
+#define YELLOW "\033[01;33m"
+#define RED "\033[0;31m"
+#define RESET_COLOR "\033[0m"
+
+#define SPACE_BUFFER "                                                  "
+
 static int io_thread_ret_val;
 
 /* void set_K(inputs_t *p, int val) {
@@ -27,15 +34,13 @@ int io_main(void) {
         //printf("K is %lf", K);
 
 		//Output
-		printf("\r  Battery voltage: ");
+        char color[8];
 
-        if(battery_data.voltage > 11.8) printf("\033[1;32m");
-        else if (battery_data.voltage > 10) printf("\033[01;33m");
-        else printf("\033[0;31m");
+        if(battery_data.voltage > 11.8) color = GREEN;
+        else if (battery_data.voltage > 10) color = YELLOW;
+        else color = RED;
 
-        printf("%lf", battery_data.voltage);
-        printf("\033[0m");
-        printf(" V                                                  ");
+        printf("\r  Battery voltage: %s%lf%s V%s", color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER);
 
 		fflush(stdout);
 		
