@@ -21,13 +21,13 @@ Could be "to many uses of get_latest_dsm"?
 
 
 */
-#define MIN_ERROR 0.5
+#define MIN_ERROR 0.3
 #define MAX_I 0.4
 #define FREQUENCY 200.0
 #define TS 1/FREQUENCY
 #define MAX_ROLL_ANGLE 20.0
 #define MAX_PITCH_ANGLE 20.0
-#define MAX_YAW_RATE 30.0 
+#define MAX_YAW_RATE 90.0 
 
 
 // IMU Data
@@ -103,8 +103,8 @@ static double K_pa_p = 2.0;
 static double K_pa_r = 2.0;
 //static double K_pa_y = 3.0;
 
-static double K_ia_p = 0.002*4.0;
-static double K_ia_r = 0.002*4.0;
+static double K_ia_p = 0.002*5.0;
+static double K_ia_r = 0.002*5.0;
 //static double K_ia_y = 0.002*4.0;
 
 static double I_a_p = 0.0;
@@ -281,6 +281,9 @@ void rate_PID(esc_input_t *esc_input, double thr){
 void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
 	double p_angle_error = *pitch_ref - pitch;
 	double r_angle_error = *roll_ref - roll;
+
+	update_values(p_angle_error, r_angle_error);
+
 	I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
 	I_a_r = I_a_r + K_ia_r * TS * r_angle_error;
 	//I_a_y = I_a_y + K_ia_y * TS * y_angle_error;
@@ -387,7 +390,7 @@ int flight_main(sem_t *IMU_sem){
 			// multiply dsm signal with max angle or rate
 			roll_ref = -rc_dsm_ch_normalized(2) * MAX_ROLL_ANGLE;
 			pitch_ref = rc_dsm_ch_normalized(3) * MAX_PITCH_ANGLE;
-			yaw_ref = rc_dsm_ch_normalized(4) * MAX_YAW_RATE;
+			yaw_ref = -rc_dsm_ch_normalized(4) * MAX_YAW_RATE;
 			
 			sem_wait(IMU_sem);
 			get_latest_imu(&imu_data);

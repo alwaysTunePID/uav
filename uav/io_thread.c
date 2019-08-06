@@ -15,7 +15,6 @@ static int io_thread_ret_val;
 
 int io_main(void) {
 	// double K;
-	//imu_entry_t imu_data;
 
     while (rc_get_state() != EXITING) {
 		//Input
@@ -26,14 +25,18 @@ int io_main(void) {
         //printf("K is %lf", K);
 
 		//Output
-		// get_latest_imu(&imu_data);
-		// printf("\rAccel: %lf %lf %lf", imu_data.accel[0], imu_data.accel[1], imu_data.accel[2]);
-		// fflush(stdout);
+		//printf("\rp_angle_error: %lf r_angle_error %lf", p_angle_error, r_angle_error);
+		//fflush(stdout);
 		
         rc_usleep(500000);
     }
 
     return 0;
+}
+
+void update_values(double p, double r) {
+    printf("\rp_angle_error: %lf r_angle_error %lf", p, r);
+	fflush(stdout);
 }
 
 void calibration_sleep() {
