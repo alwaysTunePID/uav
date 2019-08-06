@@ -184,7 +184,7 @@ void log_airspeed()
     if (cbuffer_try_get(airspeed_buffer, &d))
     {
         //LOG_W("Try get not available");
-        return -1;
+        return;
     }
     else
     {
