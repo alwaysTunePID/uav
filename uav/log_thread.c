@@ -5,7 +5,6 @@
 #include "baro.h"
 #include "dsm_thread.h"
 #include "gps.h"
-#include "battery.h"
 #include "airspeed.h"
 
 #define LOG_DELAY_US   2000000
@@ -21,7 +20,6 @@ void* log_thread_func(void)
 		 
 		log_imu();
 		log_dsm();
-		log_battery();
 		rc_usleep(5000);
     	//  log_gps();
     	//  log_airspeed();
