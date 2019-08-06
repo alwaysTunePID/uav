@@ -136,7 +136,7 @@ messageClassType process_buffer(uint8_t *buf, size_t *size)
 
     if (strncmp((char*)buf, sync_char, 2) != 0)
     {
-        printf("ERROR: %s buffer did not contain and sync char", __FUNCTION__);
+        printf("ERROR: %s buffer did not contain and sync char\n", __FUNCTION__);
         return UNKNOWN;
     }
 

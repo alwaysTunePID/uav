@@ -159,7 +159,7 @@ static uint32_t get_conversion(uint8_t command)
     int bytes = rc_i2c_read_bytes(I2C_BUS, 0, 3, val);
     if (bytes != 3)
     {
-        printf("Error no adc value");
+        printf("Error no adc value\n");
         return 0;
     }
 

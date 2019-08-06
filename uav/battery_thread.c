@@ -25,6 +25,6 @@ int battery_main() {
 static int battery_thread_ret_val;
 void* battery_thread_func() {
 	battery_thread_ret_val = battery_main();
-	if(battery_thread_ret_val) printf("battery_thread failed to initialize");
+	if(battery_thread_ret_val) printf("battery_thread failed to initialize\n");
 	return (void*)&battery_thread_ret_val;
 }

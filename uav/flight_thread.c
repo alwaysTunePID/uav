@@ -239,7 +239,7 @@ void load_offset(double* mean_pitch_offset, double* mean_roll_offset) {
 	FILE* calibration_file = fopen("pitch_roll_offest.cal", "r");
 
 	if (calibration_file == NULL){
-		fprintf(stderr, "Could not open a calibration file! Use flag -c if you have not created one. \n");
+		fprintf(stderr, "Could not open a calibration file! Use flag -c if you have not created one.\n");
 	}
 
 	fscanf(calibration_file, "%lf %lf", mean_pitch_offset, mean_roll_offset);

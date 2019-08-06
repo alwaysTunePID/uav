@@ -134,7 +134,7 @@ int dsm_main(){
     while(rc_get_state()!=EXITING){
 
         if(rc_dsm_is_connection_active()==0){
-            printf("\rSeconds since last DSM packet: ");
+            printf("\rSeconds since last DSM packet: ");//\\r will conflict with io_thread
             printf("%0.1f ", rc_dsm_nanos_since_last_packet()/1000000000.0);
             printf("                             ");
             fflush(stdout);
