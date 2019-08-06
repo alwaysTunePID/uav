@@ -1,5 +1,4 @@
 #include <robotcontrol.h>
-#include <stdio.h>
 
 typedef struct bmp_entry {
     uint64_t time_ns;
