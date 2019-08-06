@@ -33,7 +33,7 @@ Could be "to many uses of get_latest_dsm"?
 // IMU Data
 static imu_entry_t imu_data;
 static esc_input_t esc_input;
-static bmp_entry_t baro_data;
+// static bmp_entry_t baro_data;
 
 
 // misc variables
