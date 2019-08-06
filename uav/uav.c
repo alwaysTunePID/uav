@@ -6,21 +6,21 @@
 #include "dsm_thread.h"
 #include "log_thread.h"
 #include "telemetry.h"
-#include "battery.h"
 #include "airspeed.h"
 #include "flight_thread.h"
 #include "io_thread.h"
+#include "battery_thread.h"
 // threads  
 
 static pthread_t i2c_thread;
 static pthread_t dsm_thread;
 //static pthread_t gps_thread;
 static pthread_t log_thread;
-static pthread_t battery_thread;
 static pthread_t telemetry_thread;
 //static pthread_t airspeed_thread;  
 static pthread_t flight_thread;
 static pthread_t io_thread;
+static pthread_t battery_thread;
 //static pthread_t test_thread;
 
 
@@ -141,6 +141,9 @@ int main()
 	if (rc_pthread_create(&io_thread, io_thread_func, NULL, SCHED_OTHER, 0)) {
 		fprintf(stderr, "ERROR: Failed to start input/output thread\n");
 		return -1;
+	}
+	if(rc_pthread_create(&battery_thread, battery_thread_func, NULL, SCHED_OTHER, 0)) {
+		fprintf(stderr, "ERROR: Failed to start input/output thread \n");
 	}
 
     // Sleep and let threads work
