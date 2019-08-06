@@ -3,7 +3,7 @@
 #include "imu.h"
 #include <stdio.h>
 #include <robotcontrol.h>
-
+#include <unistd.h>
 
 
 static int io_thread_ret_val;
@@ -16,7 +16,7 @@ static int io_thread_ret_val;
 
 int io_main(void) {
 	// double K;
-	imu_entry_t imu_data;
+	//imu_entry_t imu_data;
 
     while (rc_get_state() != EXITING) {
 		//Input
@@ -27,14 +27,28 @@ int io_main(void) {
         //printf("K is %lf", K);
 
 		//Output
-		get_latest_imu(&imu_data);
-		printf("\rAccel: %lf %lf %lf", imu_data.accel[0], imu_data.accel[1], imu_data.accel[2]);
-		fflush(stdout);
+		// get_latest_imu(&imu_data);
+		// printf("\rAccel: %lf %lf %lf", imu_data.accel[0], imu_data.accel[1], imu_data.accel[2]);
+		// fflush(stdout);
 		
         rc_usleep(500000);
     }
 
     return 0;
+}
+
+void calibration_sleep() {
+    sleep(1);
+    char loading[30] = "#.............................";
+    for(int i = 1; i < 30; i++) {
+        loading[i] = '#';
+        printf("\r  Calibrating IMU [%s] %d s / 30 s", loading, (i+1));
+        fflush(stdout);
+        sleep(1);
+    }
+
+    printf("\r  Calibrating IMU [%s] Done!       \n", loading);
+    fflush(stdout);
 }
 
 

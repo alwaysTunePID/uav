@@ -7,6 +7,7 @@
 #include "dsm_thread.h"
 #include "flight_thread.h"
 #include "circular_buffer.h"
+#include "io_thread.h"
 //#include "uav.h"
 
 /*
@@ -303,8 +304,8 @@ void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
 // --------------------------------------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------------------------------------
 int flight_main(sem_t *IMU_sem){
-
-	sleep(30);
+	calibration_sleep();
+	
 	init_controller_log_file();
 
 	int mean_samples = 0;
