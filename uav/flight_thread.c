@@ -8,7 +8,6 @@
 #include "flight_thread.h"
 #include "circular_buffer.h"
 #include "io_thread.h"
-//#include "uav.h"
 
 /*
 This thread is intended to handle the flying of the drone. All control signals related to the flying will be calculated here. 
