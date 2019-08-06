@@ -342,9 +342,6 @@ void rate_PID(esc_input_t *esc_input, double thr){
 void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
 	double p_angle_error = *pitch_ref - pitch;
 	double r_angle_error = *roll_ref - roll;
-
-	update_values(p_angle_error, r_angle_error);
-
 	I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
 	I_a_r = I_a_r + K_ia_r * TS * r_angle_error;
 	//I_a_y = I_a_y + K_ia_y * TS * y_angle_error;
@@ -380,15 +377,6 @@ int flight_main(sem_t *IMU_sem){
 	//Calibrate
 	if(calibrate) calibrate_IMU(IMU_sem, &mean_pitch_offset, &mean_roll_offset);
 	else load_offset(&mean_pitch_offset, &mean_roll_offset);
-
-	//TODO remove
-	printf("Pitch offset: ");
-	printf("%8.4f ", mean_pitch_offset);
-	printf("\n");
-
-	printf("Rolll offset: ");
-	printf("%8.4f ", mean_roll_offset);
-	printf("\n");
 
 	while (rc_get_state() != EXITING){
 		dsm_nanos = rc_dsm_nanos_since_last_packet();

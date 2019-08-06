@@ -16,8 +16,7 @@ int battery_main() {
 	if(rc_adc_init()==1) return -1;
 	while(rc_get_state()!=EXITING) {
 		get_voltage(&battery_data);
-		rc_usleep(5000000);
-		printf("battery is  %lf", battery_data.voltage);	
+		rc_usleep(5000000);	
 	}
 	rc_adc_cleanup();
 	return 0;

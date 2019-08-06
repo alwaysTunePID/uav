@@ -1,9 +1,9 @@
 #include "io_thread.h"
 #include "imu.h"
+#include "battery_thread.h"
 #include <stdio.h>
 #include <robotcontrol.h>
 #include <unistd.h>
-
 
 static int io_thread_ret_val;
 
@@ -16,6 +16,8 @@ static int io_thread_ret_val;
 int io_main(void) {
 	// double K;
 
+    sleep(1);
+
     while (rc_get_state() != EXITING) {
 		//Input
         //scanf(" %lf", &K);
@@ -25,18 +27,22 @@ int io_main(void) {
         //printf("K is %lf", K);
 
 		//Output
-		//printf("\rp_angle_error: %lf r_angle_error %lf", p_angle_error, r_angle_error);
-		//fflush(stdout);
+		printf("\r  Battery voltage: ");
+
+        if(battery_data.voltage > 11.8) printf("\033[1;32m");
+        else if (battery_data.voltage > 10) printf("\033[01;33m");
+        else printf("\033[0;31m");
+
+        printf("%lf", battery_data.voltage);
+        printf("\033[0m");
+        printf(" V                                                  ");
+
+		fflush(stdout);
 		
         rc_usleep(500000);
     }
 
     return 0;
-}
-
-void update_values(double p, double r) {
-    printf("\rp_angle_error: %lf r_angle_error %lf", p, r);
-	fflush(stdout);
 }
 
 void calibration_sleep() {
