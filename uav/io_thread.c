@@ -1,5 +1,4 @@
 #include "io_thread.h"
-#include "uav.h"
 #include "imu.h"
 #include <stdio.h>
 #include <robotcontrol.h>
