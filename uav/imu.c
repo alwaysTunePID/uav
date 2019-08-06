@@ -19,6 +19,7 @@ FILE *imu_log;
 int init_imu_log()
 {
 	// add flag for enable and disable logging?
+	
 	imu_log = fopen("imu.log","w");
 
 	if(imu_log == NULL)
@@ -84,6 +85,7 @@ int initialize_imu()
 	mpu_config.enable_magnetometer = 1;
 	mpu_config.dmp_fetch_accel_gyro = 1;
 	mpu_config.dmp_sample_rate = 200;
+	mpu_config.show_warnings = 0;
    
 	
 	// Initialize with config and pointer to data structure

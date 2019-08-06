@@ -16,15 +16,21 @@ static int log_thread_ret_val;
 void* log_thread_func(void)
 {
 	rc_usleep(LOG_DELAY_US);
+	//int counter = 0;
 	while(rc_get_state()!=EXITING){
-		
-		rc_usleep(5000); 
+		 
 		log_imu();
-	//	log_baro();
 		log_dsm();
 		log_battery();
-    //  log_gps();
-    //  log_airspeed();  
+		rc_usleep(5000);
+    	//  log_gps();
+    	//  log_airspeed();
+		// Log baro in 25 Hz
+		// if (counter == 8){
+		// 	log_baro();
+		// 	counter=0;
+		// }
+		// counter++; 
 	}
 	log_thread_ret_val = 0;
 	return (void*)&log_thread_ret_val;
