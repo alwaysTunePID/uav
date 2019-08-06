@@ -42,7 +42,7 @@ void update_values(double p, double r) {
 void calibration_sleep() {
     sleep(1);
     char loading[30] = "#.............................";
-    for(int i = 1; i < 30; i++) {
+    for(int i = 1; i < 30 && rc_get_state() != EXITING; i++) {
         loading[i] = '#';
         printf("\r  Calibrating IMU [%s] %d s / 30 s", loading, (i+1));
         fflush(stdout);

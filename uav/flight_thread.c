@@ -8,6 +8,7 @@
 #include "flight_thread.h"
 #include "circular_buffer.h"
 #include "io_thread.h"
+#include "uav.h"
 
 /*
 This thread is intended to handle the flying of the drone. All control signals related to the flying will be calculated here. 
@@ -194,6 +195,66 @@ int log_controller(esc_input_t *esc_input){
 	return 0;
 }
 
+void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_offset) {
+	calibration_sleep();
+
+	sem_wait(IMU_sem);
+	get_latest_imu(&imu_data);
+	pitch = imu_data.euler[0] * RAD_TO_DEG;
+	roll = imu_data.euler[1] * RAD_TO_DEG;
+
+	*mean_pitch_offset = pitch;
+	*mean_roll_offset = roll;
+
+	for(int mean_samples = 1; mean_samples < 100; mean_samples++) {
+		sem_wait(IMU_sem);
+		get_latest_imu(&imu_data);
+		pitch = imu_data.euler[0] * RAD_TO_DEG;
+		roll = imu_data.euler[1] * RAD_TO_DEG;
+
+		*mean_pitch_offset = (double)(mean_samples - 1) / ((double)mean_samples) * *mean_pitch_offset + pitch / ((double)mean_samples);
+		*mean_roll_offset = (double)(mean_samples - 1) / ((double)mean_samples) * *mean_roll_offset + roll / ((double)mean_samples);
+	}
+
+	printf("Pitch offset: ");
+	printf("%8.4f ", *mean_pitch_offset);
+	printf("\n");
+
+	printf("Rolll offset: ");
+	printf("%8.4f ", *mean_roll_offset);
+	printf("\n");
+
+	FILE* calibration_file = fopen("pitch_roll_offest.cal", "w");
+
+	if (calibration_file == NULL){
+		fprintf(stderr, "Could not open a calibration file!\n");
+	}
+
+	fprintf(calibration_file, "%lf %lf", *mean_pitch_offset, *mean_roll_offset);
+	
+	fclose(calibration_file);
+}
+
+void load_offset(double* mean_pitch_offset, double* mean_roll_offset) {
+	FILE* calibration_file = fopen("pitch_roll_offest.cal", "r");
+
+	if (calibration_file == NULL){
+		fprintf(stderr, "Could not open a calibration file! Use flag -c if you have not created one. \n");
+	}
+
+	fscanf(calibration_file, "%lf %lf", mean_pitch_offset, mean_roll_offset);
+	
+	fclose(calibration_file);
+
+	printf("Pitch offset: ");
+	printf("%8.4f ", *mean_pitch_offset);
+	printf("\n");
+
+	printf("Rolll offset: ");
+	printf("%8.4f ", *mean_roll_offset);
+	printf("\n");
+}
+
 // Used to update parameters live through the controller. UNUSED. NEEDS UPDATE
 /*static void update_PID_param(void){
 	double scale_k = 0.001;
@@ -306,11 +367,8 @@ void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
 // --------------------------------------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------------------------------------
 int flight_main(sem_t *IMU_sem){
-	calibration_sleep();
-	
 	init_controller_log_file();
-
-	int mean_samples = 0;
+	
 	double mean_roll_offset = 0;
 	double mean_pitch_offset = 0;
 	
@@ -319,130 +377,111 @@ int flight_main(sem_t *IMU_sem){
 	double yaw_ref = 0;
 	double thr = 0; // normalized throttle
 
+	//Calibrate
+	if(calibrate) calibrate_IMU(IMU_sem, &mean_pitch_offset, &mean_roll_offset);
+	else load_offset(&mean_pitch_offset, &mean_roll_offset);
+
+	//TODO remove
+	printf("Pitch offset: ");
+	printf("%8.4f ", mean_pitch_offset);
+	printf("\n");
+
+	printf("Rolll offset: ");
+	printf("%8.4f ", mean_roll_offset);
+	printf("\n");
 
 	while (rc_get_state() != EXITING){
-		if (mean_samples < 100){
-			sem_wait(IMU_sem);
-			get_latest_imu(&imu_data);
-			pitch = imu_data.euler[0] * RAD_TO_DEG;
-			roll = imu_data.euler[1] * RAD_TO_DEG;
+		dsm_nanos = rc_dsm_nanos_since_last_packet();
 
-			if (mean_samples > 1){
-				// Calculate cumulative mean
-				mean_roll_offset = (double)(mean_samples - 1) / ((double)mean_samples) * mean_roll_offset + roll / ((double)mean_samples);
-				mean_pitch_offset = (double)(mean_samples - 1) / ((double)mean_samples) * mean_pitch_offset + pitch / ((double)mean_samples);
-				mean_samples++;
-			}
-			else {
-				mean_roll_offset = roll;
-				mean_pitch_offset = pitch;
-				mean_samples++;
-			}
+		
+		if (rc_dsm_ch_normalized(5) > 0.7){
+			armed = 1;
+			rc_led_set(RC_LED_RED, 1);
+		} else {
+			armed = 0;
+			rc_led_set(RC_LED_RED, 0);
 		}
-		else if (mean_samples == 100){
-			printf("Pitch offset: ");
-			printf("%8.4f ", mean_pitch_offset);
-			printf("\n");
 
-			printf("Rolll offset: ");
-			printf("%8.4f ", mean_roll_offset);
-			printf("\n");
-			mean_samples++;
+		if (rc_dsm_ch_normalized(6) > 0.7){
+			pid_active = 1;
+			rc_led_set(RC_LED_GREEN, 1);
+		} else {
+			pid_active = 0;
+			rc_led_set(RC_LED_GREEN, 0);
+		}
+		// Height regulator. UNUSED
+		if (rc_dsm_ch_normalized(7) > 0.7){ 
+			// if (const_alt_active == 0)
+			// {
+			// 	get_latest_baro(&baro_data);
+			// 	alt_ref = baro_data.bmp_data.alt_m;
+			// 	printf("Baro ref alt: ");
+			// 	printf("%8.2f ", baro_data.bmp_data.alt_m);
+			// 	printf("\n");
+			// 	const_alt_active = 1;
+			// }
+		} else {
+			const_alt_active = 0;
+		}
+		// For this to work the controller output MUST be calibrated so that the signals always stay in the interval [-1,1]
+		// Since d.channels[1-7] gives a double [-1,1] this will be interpreted as an angel, this must be scaled to
+		// allow for a reasonable change in control signal.
+
+		// multiply dsm signal with max angle or rate
+		roll_ref = -rc_dsm_ch_normalized(2) * MAX_ROLL_ANGLE;
+		pitch_ref = rc_dsm_ch_normalized(3) * MAX_PITCH_ANGLE;
+		yaw_ref = -rc_dsm_ch_normalized(4) * MAX_YAW_RATE;
+		
+		sem_wait(IMU_sem);
+		get_latest_imu(&imu_data);
+
+		pitch = imu_data.euler[0] * RAD_TO_DEG - mean_pitch_offset;
+		roll = imu_data.euler[1] * RAD_TO_DEG - mean_roll_offset;
+		yaw = imu_data.gyro[2];
+
+		p_rate = imu_data.gyro[0];
+		r_rate = imu_data.gyro[1];
+		y_rate = imu_data.gyro[2];
+
+		if (dsm_nanos > 200000000){
+			rc_servo_send_esc_pulse_normalized(0, 0);
+			printf("\rSeconds since last DSM packet: %.2f              ", dsm_nanos / 1000000000.0);
 		}
 		else {
-			dsm_nanos = rc_dsm_nanos_since_last_packet();
 
+			// How to get data from log threads;
 			
-			if (rc_dsm_ch_normalized(5) > 0.7){
-				armed = 1;
-				rc_led_set(RC_LED_RED, 1);
-			} else {
-				armed = 0;
-				rc_led_set(RC_LED_RED, 0);
-			}
-			if (rc_dsm_ch_normalized(6) > 0.7){
-				pid_active = 1;
-				rc_led_set(RC_LED_GREEN, 1);
+			thr = rc_dsm_ch_normalized(1);
+			// bound the signal to the escs
+			if (thr < -0.1)
+				thr = -0.1;
+			if (thr > 1.0)
+				thr = 1.0;
+
+			if (pid_active == 1){
+				
+				// update_PID_param();
+				// PID_controller(TS, &esc_input, thr);
+				angle_PID(&pitch_ref, &roll_ref, &yaw_ref);
+				rate_PID(&esc_input,thr);
+			
 			}
 			else {
-				pid_active = 0;
-				rc_led_set(RC_LED_GREEN, 0);
+				manual_output(&esc_input, thr);
 			}
-			// Height regulator. UNUSED
-			if (rc_dsm_ch_normalized(7) > 0.7){ 
-				// if (const_alt_active == 0)
-				// {
-				// 	get_latest_baro(&baro_data);
-				// 	alt_ref = baro_data.bmp_data.alt_m;
-				// 	printf("Baro ref alt: ");
-				// 	printf("%8.2f ", baro_data.bmp_data.alt_m);
-				// 	printf("\n");
-				// 	const_alt_active = 1;
-				// }
+			if (armed == 1){
+				rc_servo_send_esc_pulse_normalized(1, esc_input.u_1);
+				rc_servo_send_esc_pulse_normalized(3, esc_input.u_2);
+				rc_servo_send_esc_pulse_normalized(5, esc_input.u_3);
+				rc_servo_send_esc_pulse_normalized(7, esc_input.u_4);
 			}
 			else {
-				const_alt_active = 0;
-			}
-			// For this to work the controller output MUST be calibrated so that the signals always stay in the interval [-1,1]
-			// Since d.channels[1-7] gives a double [-1,1] this will be interpreted as an angel, this must be scaled to
-			// allow for a reasonable change in control signal.
-
-			// multiply dsm signal with max angle or rate
-			roll_ref = -rc_dsm_ch_normalized(2) * MAX_ROLL_ANGLE;
-			pitch_ref = rc_dsm_ch_normalized(3) * MAX_PITCH_ANGLE;
-			yaw_ref = -rc_dsm_ch_normalized(4) * MAX_YAW_RATE;
-			
-			sem_wait(IMU_sem);
-			get_latest_imu(&imu_data);
-
-			pitch = imu_data.euler[0] * RAD_TO_DEG - mean_pitch_offset;
-			roll = imu_data.euler[1] * RAD_TO_DEG - mean_roll_offset;
-			yaw = imu_data.gyro[2];
-
-			p_rate = imu_data.gyro[0];
-			r_rate = imu_data.gyro[1];
-			y_rate = imu_data.gyro[2];
-
-			if (dsm_nanos > 200000000){
 				rc_servo_send_esc_pulse_normalized(0, 0);
-				printf("\rSeconds since last DSM packet: %.2f              ", dsm_nanos / 1000000000.0);
 			}
-			else {
-
-				// How to get data from log threads;
-				
-				thr = rc_dsm_ch_normalized(1);
-				// bound the signal to the escs
-				if (thr < -0.1)
-					thr = -0.1;
-				if (thr > 1.0)
-					thr = 1.0;
-
-				if (pid_active == 1){
-					
-					// update_PID_param();
-					// PID_controller(TS, &esc_input, thr);
-					angle_PID(&pitch_ref, &roll_ref, &yaw_ref);
-					rate_PID(&esc_input,thr);
-				
-				}
-				else {
-					manual_output(&esc_input, thr);
-				}
-				if (armed == 1){
-					rc_servo_send_esc_pulse_normalized(1, esc_input.u_1);
-					rc_servo_send_esc_pulse_normalized(3, esc_input.u_2);
-					rc_servo_send_esc_pulse_normalized(5, esc_input.u_3);
-					rc_servo_send_esc_pulse_normalized(7, esc_input.u_4);
-				}
-				else {
-					rc_servo_send_esc_pulse_normalized(0, 0);
-				}
-			}
-
-			// sleep roughly enough to maintain FREQUENCY
-			rc_usleep(1000000 / FREQUENCY);
 		}
+
+		// sleep roughly enough to maintain FREQUENCY
+		rc_usleep(1000000 / FREQUENCY);
 	}
 	close_controller_log();
 

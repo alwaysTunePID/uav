@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <robotcontrol.h> // includes ALL Robot Control subsystems
 #include <semaphore.h>
 #include "gps.h"
@@ -23,6 +24,7 @@ static pthread_t flight_thread;
 static pthread_t io_thread;
 //static pthread_t test_thread;
 
+int calibrate = 0;
 
 /**
  * Make the Pause button toggle between paused and running states.
@@ -54,8 +56,23 @@ void on_pause_press()
     return;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    int c;
+
+    while((c = getopt(argc, argv, "ch")) != -1) {
+        switch(c) {
+        case 'c':
+            calibrate = 1;
+            break;
+        case 'h':
+            printf("\nUSAGE: uav [-c|-h]\n");
+            printf("  -c  Calibrate and calculate offset for IMU. \n");
+            printf("  -h  Prints this help message. \n");
+            return 0;
+        }
+    }
+    
     sem_t IMU_sem;
     int ret;
     void* thread_retval; // return value of the thread
