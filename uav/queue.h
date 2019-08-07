@@ -21,4 +21,4 @@ void pop(Queue* q, char* output);
 int empty(Queue* q);
 int full(Queue* q);
 
-#endif;
+#endif

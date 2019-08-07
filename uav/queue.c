@@ -1,8 +1,10 @@
 #include "queue.h"
+#include <string.h>
+#include <stdlib.h>
 
 void init(Queue* q) {
     q->head = q->trail = 0;
-    realloc(&(q->q), q->size * sizeof(Data));
+    //realloc(&(q->q), q->size * sizeof(q->q));
 }
 
 void push(Queue* q, char element[]) {
@@ -10,7 +12,7 @@ void push(Queue* q, char element[]) {
 }
 
 void pop(Queue* q, char* output) {
-    strcpy(*output, q->q[q->head-- % q->size]);
+    strcpy(output, q->q[q->head++ % q->size]);
 }
 
 int empty(Queue* q) {

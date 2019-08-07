@@ -1,6 +1,7 @@
 #include "io_thread.h"
 #include "imu.h"
 #include "battery_thread.h"
+#include "queue.h"
 #include <robotcontrol.h>
 #include <unistd.h>
 
@@ -22,7 +23,7 @@ int block_main = 0;
 
 int io_main(void) {
 	sleep(1);
-
+    
     while (rc_get_state() != EXITING) {
         rc_usleep(500000);
 
