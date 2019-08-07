@@ -23,13 +23,21 @@ int io_main(void) {
 
     while (rc_get_state() != EXITING) {
         char color[8];
+        char status[23];
 
+        //Set battery color
         if(battery_data.voltage > 11.5) color = GREEN;
         else if (battery_data.voltage > 11) color = YELLOW;
         else color = RED;
 
-        if(dsm_nanos == 0) printf("\r  Battery voltage: %s%lf%s V%s", color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER);
-        else printf("\r  Battery voltage: %s%lf%s V%s Seconds since last DSM packet: %.2f", color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER, dsm_nanos/1000000000.0);
+        //Check and set current status
+        if(errors > 0 || color == RED) sprintf(status, "%s[ERROR]%s", RED, RESET_COLOR);
+        else if (warnings > 0 ||color == YELLOW) sprintf(status, "%s[WARN]%s", YELLOW, RESET_COLOR);
+        else sprintf(status, "%s[OK]%s", GREEN, RESET_COLOR);
+
+        //Print
+        if(dsm_nanos == 0) printf("\r  %s Battery voltage: %s%lf%s V%s", status, color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER);
+        else printf("\r  %s Battery voltage: %s%lf%s V%s Seconds since last DSM packet: %.2f", status, color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER, dsm_nanos/1000000000.0);
 
 		fflush(stdout);
 		
