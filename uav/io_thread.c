@@ -13,6 +13,7 @@
 #define SPACE_BUFFER "                                                  "
 
 static int io_thread_ret_val;
+static uint64_t dsm_nanos = 0;
 
 /* void set_K(inputs_t *p, int val) {
     pthread_mutex_lock(&(p->mutex));
@@ -36,11 +37,12 @@ int io_main(void) {
 		//Output
         char color[8];
 
-        if(battery_data.voltage > 11.8) color = GREEN;
-        else if (battery_data.voltage > 10) color = YELLOW;
+        if(battery_data.voltage > 11.5) color = GREEN;
+        else if (battery_data.voltage > 11) color = YELLOW;
         else color = RED;
 
-        printf("\r  Battery voltage: %s%lf%s V%s", color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER);
+        if(dsm_nanos == 0) printf("\r  Battery voltage: %s%lf%s V%s", color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER);
+        else printf("\r  Battery voltage: %s%lf%s V%s Seconds since last DSM packet: %.2f", color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER, dsm_nanos/1000000000.0);
 
 		fflush(stdout);
 		
@@ -55,13 +57,21 @@ void calibration_sleep() {
     char loading[30] = "#.............................";
     for(int i = 1; i < 30 && rc_get_state() != EXITING; i++) {
         loading[i] = '#';
-        printf("\r  Calibrating IMU [%s] %d s / 30 s", loading, (i+1));
+        printf("\r  IMU waking up [%s] %d s / 30 s", loading, (i+1));
         fflush(stdout);
         sleep(1);
     }
 
-    printf("\r  Calibrating IMU [%s] Done!       \n", loading);
+    printf("\r  IMU waking up [%s] Done!       \n", loading);
     fflush(stdout);
+}
+
+void dsm_signal_loss_warning(uint64_t time_ns) {
+    dsm_nanos = time_ns;
+}
+
+void dsm_signal_restored() {
+    dsm_nanos = 0;
 }
 
 

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <robotcontrol.h>
 #include "circular_buffer.h"
+#include "io_thread.h"
 
 
 static int dsm_thread_ret_val;
@@ -130,14 +131,16 @@ int dsm_main(){
     // set callback, we  are now listening and reacting to dsm packets
     rc_dsm_set_callback(&__send_pulses);
 	
+    int dsm_signal_loss = 0;
 
     while(rc_get_state()!=EXITING){
 
         if(rc_dsm_is_connection_active()==0){
-            printf("\rSeconds since last DSM packet: ");//\\r will conflict with io_thread
-            printf("%0.1f ", rc_dsm_nanos_since_last_packet()/1000000000.0);
-            printf("                             ");
-            fflush(stdout);
+            dsm_signal_loss = 1;
+            dsm_signal_loss_warning(rc_dsm_nanos_since_last_packet());
+        } else if (dsm_signal_loss) {
+            dsm_signal_loss = 0;
+            dsm_signal_restored();
         }
 
 	
