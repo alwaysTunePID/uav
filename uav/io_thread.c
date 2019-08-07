@@ -63,10 +63,12 @@ void calibration_sleep() {
 
 void dsm_signal_loss_warning(uint64_t time_ns) {
     dsm_nanos = time_ns;
+    error++;
 }
 
 void dsm_signal_restored() {
     dsm_nanos = 0;
+    error--;
 }
 
 void *io_thread_func(void) {
