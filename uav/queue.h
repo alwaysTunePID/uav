@@ -11,6 +11,9 @@ typedef struct Queue {
     unsigned int size;
     unsigned int head;
     unsigned int trail;
+    unsigned int message_size;
+    char message[255];
+    char **messages;
     char q[10][255];
     void* overfull;
 } Queue;

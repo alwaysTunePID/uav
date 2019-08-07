@@ -27,6 +27,8 @@ static int queue_initialized = 0;
 int block_main = 0;
 
 int io_main(void) {
+    queue_init(&messages);
+
 	sleep(1);
 
     prinf("\n");

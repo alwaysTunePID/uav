@@ -2,7 +2,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-void queue_init(Queue* q) {
+void queue_init(Queue* q, unsigned int message_size) {
+    q->message_size = message_size;
+    q->messages=malloc(message_size*sizeof(q->message));
     q->head = q->trail = 0;
     //realloc(&(q->q), q->size * sizeof(q->q));
 }
