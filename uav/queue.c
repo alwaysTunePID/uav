@@ -2,23 +2,23 @@
 #include <string.h>
 #include <stdlib.h>
 
-void init(Queue* q) {
+void queue_init(Queue* q) {
     q->head = q->trail = 0;
     //realloc(&(q->q), q->size * sizeof(q->q));
 }
 
-void push(Queue* q, char element[]) {
+void queue_push(Queue* q, char element[]) {
     strcpy(q->q[q->trail++ % q->size], element);
 }
 
-void pop(Queue* q, char* output) {
+void queue_pop(Queue* q, char* output) {
     strcpy(output, q->q[q->head++ % q->size]);
 }
 
-int empty(Queue* q) {
+int queue_empty(Queue* q) {
     return q->trail == q->head;
 }
 
-int full(Queue* q) {
+int queue_full(Queue* q) {
     return (q->head - q->trail) % q->size + 1 == q->size;
 }

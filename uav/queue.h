@@ -15,10 +15,10 @@ typedef struct Queue {
     void* overfull;
 } Queue;
 
-void init(Queue* q);
-void push(Queue* q, char element[]);
-void pop(Queue* q, char* output);
-int empty(Queue* q);
-int full(Queue* q);
+void queue_init(Queue* q);
+void queue_push(Queue* q, char element[]);
+void queue_pop(Queue* q, char* output);
+int queue_empty(Queue* q);
+int queue_full(Queue* q);
 
 #endif
