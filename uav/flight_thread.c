@@ -23,7 +23,6 @@ Could be "to many uses of get_latest_dsm"?
 
 */
 #define DESCEND_THR 0.4
-#define G 9.82
 #define MIN_ERROR 0.3
 #define MAX_I 0.4
 #define FREQUENCY 200.0
@@ -133,6 +132,11 @@ static double abs_fnc(double n){
 	return n;
 }
 
+static double dead_zone(double n, double min){
+	if (abs_fnc(n) < min) return 0;
+	return n;
+}
+
 static int lost_dsm_connection(){
 	return rc_dsm_nanos_since_last_packet() > 1000000000;
 }
@@ -199,7 +203,11 @@ int log_controller(esc_input_t *esc_input){
 	return 0;
 }
 
-void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_offset) {
+void LP_filter(double input, double* average, double factor){
+	*average = input*factor + (1-factor)* *average;  // ensure factor belongs to  [0,1]
+}
+
+void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_offset, double* mean_g) {
 	calibration_sleep();
 
 	sem_wait(IMU_sem);
@@ -209,6 +217,7 @@ void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_
 
 	*mean_pitch_offset = pitch;
 	*mean_roll_offset = roll;
+	*mean_g = imu_data.accel[2];
 
 	for(int mean_samples = 1; mean_samples < 100; mean_samples++) {
 		sem_wait(IMU_sem);
@@ -218,14 +227,19 @@ void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_
 
 		*mean_pitch_offset = (double)(mean_samples - 1) / ((double)mean_samples) * *mean_pitch_offset + pitch / ((double)mean_samples);
 		*mean_roll_offset = (double)(mean_samples - 1) / ((double)mean_samples) * *mean_roll_offset + roll / ((double)mean_samples);
+		*mean_g = (double)(mean_samples - 1) / ((double)mean_samples) * *mean_g + imu_data.accel[2]/ ((double)mean_samples);
 	}
 
 	printf("Pitch offset: ");
 	printf("%8.4f ", *mean_pitch_offset);
 	printf("\n");
 
-	printf("Rolll offset: ");
+	printf("Roll offset: ");
 	printf("%8.4f ", *mean_roll_offset);
+	printf("\n");
+
+	printf("gravitational constant: ");
+	printf("%8.4f ", *mean_g);
 	printf("\n");
 
 	FILE* calibration_file = fopen("pitch_roll_offest.cal", "w");
@@ -234,19 +248,19 @@ void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_
 		fprintf(stderr, "Could not open a calibration file!\n");
 	}
 
-	fprintf(calibration_file, "%lf %lf", *mean_pitch_offset, *mean_roll_offset);
+	fprintf(calibration_file, "%lf %lf %lf", *mean_pitch_offset, *mean_roll_offset, *mean_g);
 	
 	fclose(calibration_file);
 }
 
-void load_offset(double* mean_pitch_offset, double* mean_roll_offset) {
+void load_offset(double* mean_pitch_offset, double* mean_roll_offset, double* mean_g) {
 	FILE* calibration_file = fopen("pitch_roll_offest.cal", "r");
 
 	if (calibration_file == NULL){
 		fprintf(stderr, "Could not open a calibration file! Use flag -c if you have not created one.\n");
 	}
 
-	fscanf(calibration_file, "%lf %lf", mean_pitch_offset, mean_roll_offset);
+	fscanf(calibration_file, "%lf %lf %lf", mean_pitch_offset, mean_roll_offset, mean_g);
 	
 	fclose(calibration_file);
 
@@ -256,6 +270,10 @@ void load_offset(double* mean_pitch_offset, double* mean_roll_offset) {
 
 	printf("Rolll offset: ");
 	printf("%8.4f ", *mean_roll_offset);
+	printf("\n");
+
+	printf("gravitational constant: ");
+	printf("%8.4f ", *mean_g);
 	printf("\n");
 }
 
@@ -370,21 +388,23 @@ int flight_main(sem_t *IMU_sem){
 	init_controller_log_file();
 	
 	flight_mode_t flight_mode = FLIGHT;
-	int samples = 0;
-	double mean_z_speed = 0;
+	// int samples = 0;
+	// double mean_z_speed = 0;
+	// double mean_z_acc = 0;
 
 	double mean_roll_offset = 0;
 	double mean_pitch_offset = 0;
+	double mean_g = 0;
 	
 	double pitch_ref = 0;
 	double roll_ref = 0;
 	double yaw_ref = 0;
-	double z_speed = 0;
+	// double z_speed = 0;
 	double thr = 0; // normalized throttle
 
 	//Calibrate
-	if(calibrate) calibrate_IMU(IMU_sem, &mean_pitch_offset, &mean_roll_offset);
-	else load_offset(&mean_pitch_offset, &mean_roll_offset);
+	if(calibrate) calibrate_IMU(IMU_sem, &mean_pitch_offset, &mean_roll_offset, &mean_g);
+	else load_offset(&mean_pitch_offset, &mean_roll_offset, &mean_g);
 
 
 	while (rc_get_state() != EXITING){
@@ -431,9 +451,11 @@ int flight_main(sem_t *IMU_sem){
 		p_rate = imu_data.gyro[0];
 		r_rate = imu_data.gyro[1];
 		y_rate = imu_data.gyro[2];
-
-		z_speed += TS*(imu_data.accel[2]-G);
-		//printf("\nz_speed: %lf\n", z_speed);
+		
+		// // Tried to estimate velocity but it performed lowsy. 
+		// LP_filter(imu_data.accel[2], &mean_z_acc, 0.1);
+		// z_speed += TS*(dead_zone(mean_z_acc-mean_g, 0.1));
+		// update_value(z_speed);
 
 		switch (flight_mode) {
 		case DESCEND:
@@ -441,24 +463,29 @@ int flight_main(sem_t *IMU_sem){
 				flight_mode = FLIGHT;
 				printf("\nEnter flight mode\n");
 			} else {
-				// Calculates a mean of z-acceleration
-				if  (samples == 0){
-					mean_z_speed = z_speed;
-					samples++;
-				} else if (samples == 30){
-					if (abs_fnc(mean_z_speed) < 0.4) {
-						flight_mode = LANDED;
-						printf("\nEnter landed mode\n");
-						armed = 0;
-						thr = 0;
-					}
-					printf("\nmean_z_speed: %lf\n",mean_z_speed);
-					samples=0;
-				} else {
-					mean_z_speed = (double)(samples - 1) / ((double)samples)
-					 	* mean_z_speed + z_speed / ((double)samples);
-					samples++; 
+				if (rc_dsm_nanos_since_last_packet() > 20000000000) {
+					flight_mode = LANDED;
+					printf("\nEnter landed mode\n");
+					armed = 0;
+					thr = 0;
 				}
+				// if  (samples == 0){
+				// 	mean_z_speed = z_speed;
+				// 	samples++;
+				// } else if (samples == 30){
+				// 	if (abs_fnc(mean_z_speed) < 0.4) {
+				// 		flight_mode = LANDED;
+				// 		printf("\nEnter landed mode\n");
+				// 		armed = 0;
+				// 		thr = 0;
+				// 	}
+				// 	printf("\nmean_z_speed: %lf\n",mean_z_speed);
+				// 	samples=0;
+				// } else {
+				// 	mean_z_speed = (double)(samples - 1) / ((double)samples)
+				// 	 	* mean_z_speed + z_speed / ((double)samples);
+				// 	samples++; 
+				// }
 			}
 			break;
 

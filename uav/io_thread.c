@@ -19,7 +19,7 @@ static uint64_t dsm_nanos = 0;
 static int warnings = 0;
 static int errors = 0;
 
-static int pval = 0.0;
+static double pval = 0.0;
 
 int block_main = 0;
 
