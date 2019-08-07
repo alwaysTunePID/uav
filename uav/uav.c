@@ -25,6 +25,7 @@ static pthread_t battery_thread;
 //static pthread_t test_thread;
 
 int calibrate = 0;
+int manual_mode = 0;
 
 /**
  * Make the Pause button toggle between paused and running states.
@@ -60,15 +61,19 @@ int main(int argc, char *argv[])
 {
     int c;
 
-    while((c = getopt(argc, argv, "ch")) != -1) {
+    while((c = getopt(argc, argv, "cmh")) != -1) {
         switch(c) {
         case 'c':
             calibrate = 1;
             break;
+        case 'm':
+            manual_mode = 1;
+            break;
         case 'h':
             printf("\nUSAGE: uav [-c|-h]\n");
-            printf("  -c  Calibrate and calculate offset for IMU. \n");
-            printf("  -h  Prints this help message. \n");
+            printf("  -c  Calibrate and calculate offset for IMU.\n");
+            printf("  -m  Maunal mode, will disable PID. Used to test motors. Should not be used for flight.\n");
+            printf("  -h  Prints this help message.\n");
             return 0;
         }
     }
