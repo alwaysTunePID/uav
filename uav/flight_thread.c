@@ -4,6 +4,7 @@
 #include <semaphore.h>
 #include "imu.h"
 #include "baro.h"
+#include "battery_thread.h"
 #include "dsm_thread.h"
 #include "flight_thread.h"
 #include "circular_buffer.h"
@@ -361,8 +362,8 @@ void rate_PID(esc_input_t *esc_input, double thr){
 }
 
 void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
-	double p_angle_error = *pitch_ref - pitch;
-	double r_angle_error = *roll_ref - roll;
+	double p_angle_error = clip(*pitch_ref - pitch, -70.0, 70.0);
+	double r_angle_error = clip(*roll_ref - roll, -70.0, 70.0);
 	I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
 	I_a_r = I_a_r + K_ia_r * TS * r_angle_error;
 	//I_a_y = I_a_y + K_ia_y * TS * y_angle_error;
@@ -459,7 +460,7 @@ int flight_main(sem_t *IMU_sem){
 
 		switch (flight_mode) {
 		case DESCEND:
-			if(!lost_dsm_connection()){
+			if(!lost_dsm_connection() && battery_data.voltage > 10){
 				flight_mode = FLIGHT;
 				printf("\nEnter flight mode\n");
 			} else {
@@ -490,14 +491,14 @@ int flight_main(sem_t *IMU_sem){
 			break;
 
 		case LANDED:
-			if(!lost_dsm_connection()){
+			if(!lost_dsm_connection() && battery_data.voltage > 10){
 				flight_mode = FLIGHT;
 				printf("\nEnter flight mode\n");
 			} 
 			break;
 
 		case FLIGHT:
-			if(lost_dsm_connection()){
+			if(lost_dsm_connection() || battery_data.voltage < 10){
 				flight_mode = DESCEND;
 				printf("\nEnter descend mode\n");
 				// PRINT A MESSAGE HERE!!
