@@ -15,26 +15,13 @@
 static int io_thread_ret_val;
 static uint64_t dsm_nanos = 0;
 
-/* void set_K(inputs_t *p, int val) {
-    pthread_mutex_lock(&(p->mutex));
-    p->K = val;
-    pthread_mutex_unlock(&(p->mutex));
-} */
+static int warnings = 0;
+static int errors = 0;
 
 int io_main(void) {
-	// double K;
-
-    sleep(1);
+	sleep(1);
 
     while (rc_get_state() != EXITING) {
-		//Input
-        //scanf(" %lf", &K);
-        //printf("You passed the first scanf\n");
-        //set_K(inputs, K);
-        //fflush(stdin);
-        //printf("K is %lf", K);
-
-		//Output
         char color[8];
 
         if(battery_data.voltage > 11.5) color = GREEN;
@@ -73,7 +60,6 @@ void dsm_signal_loss_warning(uint64_t time_ns) {
 void dsm_signal_restored() {
     dsm_nanos = 0;
 }
-
 
 void *io_thread_func(void) {
     io_thread_ret_val = io_main();
