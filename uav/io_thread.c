@@ -13,34 +13,31 @@
 #define SPACE_BUFFER "                                                  "
 
 static int io_thread_ret_val;
+static uint64_t dsm_nanos = 0;
 
-/* void set_K(inputs_t *p, int val) {
-    pthread_mutex_lock(&(p->mutex));
-    p->K = val;
-    pthread_mutex_unlock(&(p->mutex));
-} */
+static int warnings = 0;
+static int errors = 0;
 
 int io_main(void) {
-	// double K;
-
-    sleep(1);
+	sleep(1);
 
     while (rc_get_state() != EXITING) {
-		//Input
-        //scanf(" %lf", &K);
-        //printf("You passed the first scanf\n");
-        //set_K(inputs, K);
-        //fflush(stdin);
-        //printf("K is %lf", K);
-
-		//Output
         char color[8];
+        char status[23];
 
-        if(battery_data.voltage > 11.8) color = GREEN;
-        else if (battery_data.voltage > 10) color = YELLOW;
+        //Set battery color
+        if(battery_data.voltage > 11.5) color = GREEN;
+        else if (battery_data.voltage > 11) color = YELLOW;
         else color = RED;
 
-        printf("\r  Battery voltage: %s%lf%s V%s", color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER);
+        //Check and set current status
+        if(errors > 0 || color == RED) sprintf(status, "%s[ERROR]%s", RED, RESET_COLOR);
+        else if (warnings > 0 ||color == YELLOW) sprintf(status, "%s[WARN]%s", YELLOW, RESET_COLOR);
+        else sprintf(status, "%s[OK]%s", GREEN, RESET_COLOR);
+
+        //Print
+        if(dsm_nanos == 0) printf("\r  %s Battery voltage: %s%lf%s V%s", status, color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER);
+        else printf("\r  %s Battery voltage: %s%lf%s V%s Seconds since last DSM packet: %.2f", status, color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER, dsm_nanos/1000000000.0);
 
 		fflush(stdout);
 		
@@ -55,15 +52,24 @@ void calibration_sleep() {
     char loading[30] = "#.............................";
     for(int i = 1; i < 30 && rc_get_state() != EXITING; i++) {
         loading[i] = '#';
-        printf("\r  Calibrating IMU [%s] %d s / 30 s", loading, (i+1));
+        printf("\r  IMU waking up [%s] %d s / 30 s", loading, (i+1));
         fflush(stdout);
         sleep(1);
     }
 
-    printf("\r  Calibrating IMU [%s] Done!       \n", loading);
+    printf("\r  IMU waking up [%s] Done!       \n", loading);
     fflush(stdout);
 }
 
+void dsm_signal_loss_warning(uint64_t time_ns) {
+    dsm_nanos = time_ns;
+    error++;
+}
+
+void dsm_signal_restored() {
+    dsm_nanos = 0;
+    error--;
+}
 
 void *io_thread_func(void) {
     io_thread_ret_val = io_main();
