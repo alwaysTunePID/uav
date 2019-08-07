@@ -35,7 +35,7 @@ int io_main(void) {
         if(battery_data.voltage > 11.5 || battery_data.voltage < 0.1) strcpy(color, GREEN);//Will show 0.0 V when powered by USB.
         else if (battery_data.voltage > 11) strcpy(color, YELLOW);
         else strcpy(color, RED);
-
+        
         //Check and set current status
         if(errors > 0 || strcmp(color, RED) == 0) sprintf(status, "%s[ERROR]%s", RED, RESET_COLOR);
         else if (warnings > 0 ||strcmp(color, YELLOW) == 0) sprintf(status, "%s[WARN]%s", YELLOW, RESET_COLOR);

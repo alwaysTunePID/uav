@@ -432,12 +432,14 @@ int flight_main(sem_t *IMU_sem){
 		r_rate = imu_data.gyro[1];
 		y_rate = imu_data.gyro[2];
 
-		z_speed = z_speed + TS*(imu_data.accel[3]-G);
+		z_speed += TS*(imu_data.accel[2]-G);
+		//printf("\nz_speed: %lf\n", z_speed);
 
 		switch (flight_mode) {
 		case DESCEND:
 			if(!lost_dsm_connection()){
 				flight_mode = FLIGHT;
+				printf("\nEnter flight mode\n");
 			} else {
 				// Calculates a mean of z-acceleration
 				if  (samples == 0){
@@ -446,13 +448,15 @@ int flight_main(sem_t *IMU_sem){
 				} else if (samples == 30){
 					if (abs_fnc(mean_z_speed) < 0.4) {
 						flight_mode = LANDED;
+						printf("\nEnter landed mode\n");
 						armed = 0;
 						thr = 0;
 					}
+					printf("\nmean_z_speed: %lf\n",mean_z_speed);
 					samples=0;
 				} else {
 					mean_z_speed = (double)(samples - 1) / ((double)samples)
-					 	* mean_z_speed + pitch / ((double)samples);
+					 	* mean_z_speed + z_speed / ((double)samples);
 					samples++; 
 				}
 			}
@@ -461,12 +465,14 @@ int flight_main(sem_t *IMU_sem){
 		case LANDED:
 			if(!lost_dsm_connection()){
 				flight_mode = FLIGHT;
+				printf("\nEnter flight mode\n");
 			} 
 			break;
 
 		case FLIGHT:
 			if(lost_dsm_connection()){
 				flight_mode = DESCEND;
+				printf("\nEnter descend mode\n");
 				// PRINT A MESSAGE HERE!!
 				thr = DESCEND_THR;
 				pitch_ref = 0;
