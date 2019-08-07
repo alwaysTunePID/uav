@@ -1,5 +1,7 @@
 #ifndef IO_THREAD_H
 #define IO_THREAD_H
+#include <stdio.h>
+#include <stdint.h>
 
 void calibration_sleep();
 void dsm_signal_loss_warning(uint64_t time_ns);

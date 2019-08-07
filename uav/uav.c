@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
             manual_mode = 1;
             break;
         case 'h':
-            printf("\nUSAGE: uav [-c|-h]\n");
+            printf("\nUSAGE: uav [-c|-m|-h]\n");
             printf("  -c  Calibrate and calculate offset for IMU.\n");
             printf("  -m  Maunal mode, will disable PID. Used to test motors. Should not be used for flight.\n");
             printf("  -h  Prints this help message.\n");

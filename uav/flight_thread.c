@@ -42,9 +42,7 @@ static esc_input_t esc_input;
 // misc variables
 static int flight_thread_ret_val;						 
 static int armed = 0;				 // Static mabye?
-static int pid_active = 0;			 // Switch to 1 if you want to use the PID
 static int const_alt_active = 0;	// Switch to 1 if you want to keep constant altitude. UNUSED
-static uint64_t dsm_nanos;			 // nanoseconds since last dsm packet
 
 
 static FILE* controller_log;
@@ -307,11 +305,6 @@ void manual_output(esc_input_t *esc_input, double thr){
 	esc_input->u_3 = thr;
 	esc_input->u_4 = thr;
 }
-
-static int has_landed(){
-
-}
-
 
 // --------------------------------------------------------------------------------------------------------------------------
 // --------------------------------- Cascaded controllers--------------------------------------------------------------------
