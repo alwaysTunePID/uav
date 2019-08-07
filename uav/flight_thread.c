@@ -22,13 +22,15 @@ Could be "to many uses of get_latest_dsm"?
 
 
 */
+#define DESCEND_THR 0.4
+#define G 9.82
 #define MIN_ERROR 0.3
 #define MAX_I 0.4
 #define FREQUENCY 200.0
 #define TS 1/FREQUENCY
 #define MAX_ROLL_ANGLE 20.0
 #define MAX_PITCH_ANGLE 20.0
-#define MAX_YAW_RATE 90.0 
+#define MAX_YAW_RATE 90.0
 
 
 // IMU Data
@@ -131,6 +133,10 @@ static double abs_fnc(double n){
 	if (n < 0.0)
 		return n * -1.0;
 	return n;
+}
+
+static int lost_dsm_connection(){
+	return rc_dsm_nanos_since_last_packet() > 1000000000;
 }
 
 
@@ -302,6 +308,10 @@ void manual_output(esc_input_t *esc_input, double thr){
 	esc_input->u_4 = thr;
 }
 
+static int has_landed(){
+
+}
+
 
 // --------------------------------------------------------------------------------------------------------------------------
 // --------------------------------- Cascaded controllers--------------------------------------------------------------------
@@ -366,21 +376,25 @@ void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
 int flight_main(sem_t *IMU_sem){
 	init_controller_log_file();
 	
+	flight_mode_t flight_mode = FLIGHT;
+	int samples = 0;
+	double mean_z_speed = 0;
+
 	double mean_roll_offset = 0;
 	double mean_pitch_offset = 0;
 	
 	double pitch_ref = 0;
 	double roll_ref = 0;
 	double yaw_ref = 0;
+	double z_speed = 0;
 	double thr = 0; // normalized throttle
 
 	//Calibrate
 	if(calibrate) calibrate_IMU(IMU_sem, &mean_pitch_offset, &mean_roll_offset);
 	else load_offset(&mean_pitch_offset, &mean_roll_offset);
 
-	while (rc_get_state() != EXITING){
-		dsm_nanos = rc_dsm_nanos_since_last_packet();
 
+	while (rc_get_state() != EXITING){
 		
 		if (rc_dsm_ch_normalized(5) > 0.7){
 			armed = 1;
@@ -390,13 +404,6 @@ int flight_main(sem_t *IMU_sem){
 			rc_led_set(RC_LED_RED, 0);
 		}
 
-		if (rc_dsm_ch_normalized(6) > 0.7){
-			pid_active = 1;
-			rc_led_set(RC_LED_GREEN, 1);
-		} else {
-			pid_active = 0;
-			rc_led_set(RC_LED_GREEN, 0);
-		}
 		// Height regulator. UNUSED
 		if (rc_dsm_ch_normalized(7) > 0.7){ 
 			// if (const_alt_active == 0)
@@ -420,6 +427,7 @@ int flight_main(sem_t *IMU_sem){
 		pitch_ref = rc_dsm_ch_normalized(3) * MAX_PITCH_ANGLE;
 		yaw_ref = -rc_dsm_ch_normalized(4) * MAX_YAW_RATE;
 		
+		// Asymmetrical synchronization with the DSM data.
 		sem_wait(IMU_sem);
 		get_latest_imu(&imu_data);
 
@@ -431,48 +439,78 @@ int flight_main(sem_t *IMU_sem){
 		r_rate = imu_data.gyro[1];
 		y_rate = imu_data.gyro[2];
 
-		if (dsm_nanos > 200000000){
-			rc_servo_send_esc_pulse_normalized(0, 0);
-			printf("\rSeconds since last DSM packet: %.2f              ", dsm_nanos / 1000000000.0);
+		z_speed = z_speed + TS*(imu_data.accel[3]-G);
+
+		switch (flight_mode) {
+		case DESCEND:
+			if(!lost_dsm_connection()){
+				flight_mode = FLIGHT;
+			} else {
+				// Calculates a mean of z-acceleration
+				if  (samples == 0){
+					mean_z_speed = z_speed;
+					samples++;
+				} else if (samples == 30){
+					if (abs_fnc(mean_z_speed) < 0.4) {
+						flight_mode = LANDED;
+						armed = 0;
+						thr = 0;
+					}
+					samples=0;
+				} else {
+					mean_z_speed = (double)(samples - 1) / ((double)samples)
+					 	* mean_z_speed + pitch / ((double)samples);
+					samples++; 
+				}
+			}
+			break;
+
+		case LANDED:
+			if(!lost_dsm_connection()){
+				flight_mode = FLIGHT;
+			} 
+			break;
+
+		case FLIGHT:
+			if(lost_dsm_connection()){
+				flight_mode = DESCEND;
+				// PRINT A MESSAGE HERE!!
+				thr = DESCEND_THR;
+				pitch_ref = 0;
+				roll_ref = 0;
+				yaw_ref = 0;
+			} else {
+				thr = rc_dsm_ch_normalized(1);
+				// bound the signal to the escs
+				if (thr < -0.1) thr = -0.1;
+				if (thr > 1.0) thr = 1.0;
+			}
+			break;
 		}
-		else {
 
-			// How to get data from log threads;
-			
-			thr = rc_dsm_ch_normalized(1);
-			// bound the signal to the escs
-			if (thr < -0.1)
-				thr = -0.1;
-			if (thr > 1.0)
-				thr = 1.0;
+		if (manual_mode){
+			manual_output(&esc_input, thr);
+		} else {		
+			// update_PID_param();
+			// PID_controller(TS, &esc_input, thr);
+			angle_PID(&pitch_ref, &roll_ref, &yaw_ref);
+			rate_PID(&esc_input,thr);
+		}
 
-			if (pid_active == 1){
-				
-				// update_PID_param();
-				// PID_controller(TS, &esc_input, thr);
-				angle_PID(&pitch_ref, &roll_ref, &yaw_ref);
-				rate_PID(&esc_input,thr);
-			
-			}
-			else {
-				manual_output(&esc_input, thr);
-			}
-			if (armed == 1){
-				rc_servo_send_esc_pulse_normalized(1, esc_input.u_1);
-				rc_servo_send_esc_pulse_normalized(3, esc_input.u_2);
-				rc_servo_send_esc_pulse_normalized(5, esc_input.u_3);
-				rc_servo_send_esc_pulse_normalized(7, esc_input.u_4);
-			}
-			else {
-				rc_servo_send_esc_pulse_normalized(0, 0);
-			}
+		if (armed){
+			rc_servo_send_esc_pulse_normalized(1, esc_input.u_1);
+			rc_servo_send_esc_pulse_normalized(3, esc_input.u_2);
+			rc_servo_send_esc_pulse_normalized(5, esc_input.u_3);
+			rc_servo_send_esc_pulse_normalized(7, esc_input.u_4);
+		} else {
+			rc_servo_send_esc_pulse_normalized(0, 0);
 		}
 
 		// sleep roughly enough to maintain FREQUENCY
 		rc_usleep(1000000 / FREQUENCY);
 	}
-	close_controller_log();
 
+	close_controller_log();
 	return 0;
 }
 

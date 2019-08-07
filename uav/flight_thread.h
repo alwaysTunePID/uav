@@ -10,6 +10,12 @@ typedef struct esc_input_t{
 
 } esc_input_t;
 
+typedef enum flight_mode_t{
+        FLIGHT,
+        DESCEND,
+        LANDED
+}flight_mode_t;
+
 void* flight_thread_func();
 
 #endif //FLIGHT_THREAD_H
