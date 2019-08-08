@@ -9,6 +9,7 @@
 #include "circular_buffer.h"
 #include "io_thread.h"
 #include "uav.h"
+#include "controller_data.h"
 
 /*
 This thread is intended to handle the flying of the drone. All control signals related to the flying will be calculated here. 
@@ -31,7 +32,6 @@ Could be "to many uses of get_latest_dsm"?
 #define MAX_ROLL_ANGLE 20.0
 #define MAX_PITCH_ANGLE 20.0
 #define MAX_YAW_RATE 90.0
-
 
 // IMU Data
 static imu_entry_t imu_data;
@@ -310,21 +310,32 @@ void manual_output(esc_input_t *esc_input, double thr){
 // --------------------------------- Cascaded controllers--------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------------------------------------
 
-void rate_PID(esc_input_t *esc_input, double thr){
+void rate_PID(esc_input_t *esc_input, double thr, controller_data_t* controller_data){
 	p_rate_error = pitch_rate_ref - p_rate;
 	r_rate_error = roll_rate_ref - r_rate;
 	y_rate_error = yaw_rate_ref - y_rate;
+
+
+	controller_data->rate_errors[0] = r_rate_error;
+	controller_data->rate_errors[1] = p_rate_error;
+	controller_data->rate_errors[2 = y_rate_error;
+
 
 	v_p = K_pr_p * p_rate_error;
 	v_r = K_pr_r * r_rate_error;
 	v_y = K_pr_y * y_rate_error;
 
+	controller_data->rate_pid[0] = v_r;
+	controller_data->rate_pid[1] = v_p;
+	controller_data->rate_pid[2] = v_y;
+	
 	// Calulate new signal for each ESC
 	// Motor 4 is top right, then goes clockwise bottom right is 1.
 	v_1 = thr + v_p + v_r + v_y;
 	v_2 = thr + v_p - v_r - v_y;
 	v_3 = thr - v_p - v_r + v_y;
 	v_4 = thr - v_p + v_r - v_y;
+	
 
 	// Make sure the control signals isnt out of range
 	esc_input->u_1 = (v_1 > 1.0) ? 1.0 : v_1;
@@ -342,7 +353,7 @@ void rate_PID(esc_input_t *esc_input, double thr){
 
 }
 
-void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
+void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref, controller_data_t* controller_data){
 	double p_angle_error = *pitch_ref - pitch;
 	double r_angle_error = *roll_ref - roll;
 	I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
@@ -361,12 +372,23 @@ void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
  	roll_rate_ref = K_pa_r * r_angle_error + I_a_r;
 	yaw_rate_ref = *yaw_ref;
 
+	// Update data in controller struct for plotting
+	controller_data->angle_errors[0] = r_angle_error;
+	controller_data->angle_errors[1] = p_angle_error;
+	controller_data->k_angle_pid[1] = K_pa_r*r_angle_error;
+	controller_data->k_angle_pid[1] = K_pa_p*p_angle_error;
+	controller_data -> integral_pid[0] = I_a_r;
+	controller_data -> integral_pid[1] = I_a_p;
+	controller_data -> rate_refs[0] = roll_rate_ref;
+	controller_data -> rate_refs[1] = pitch_rate_ref;
+	controller_data -> rate_refs[2] = yaw_rate_ref;
+
 }
 
 // --------------------------------------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------------------------------------
-int flight_main(sem_t *IMU_sem){
+int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 	init_controller_log_file();
 	
 	flight_mode_t flight_mode = FLIGHT;
@@ -432,6 +454,14 @@ int flight_main(sem_t *IMU_sem){
 		r_rate = imu_data.gyro[1];
 		y_rate = imu_data.gyro[2];
 
+		controller_data->angles[0] = roll;
+		controller_data->angles[1] = pitch;
+		//controller_data->angles[2] = yaw;
+
+		controller_data->rates[0] = p_rate;
+		controller_data->rates[1] = r_rate;
+		controller_data->rates[2] = y_rate;
+
 		z_speed += TS*(imu_data.accel[2]-G);
 		//printf("\nz_speed: %lf\n", z_speed);
 
@@ -492,8 +522,8 @@ int flight_main(sem_t *IMU_sem){
 		} else {		
 			// update_PID_param();
 			// PID_controller(TS, &esc_input, thr);
-			angle_PID(&pitch_ref, &roll_ref, &yaw_ref);
-			rate_PID(&esc_input,thr);
+			angle_PID(&pitch_ref, &roll_ref, &yaw_ref, controller_data);
+			rate_PID(&esc_input,thr, controller_data);
 		}
 
 		if (armed){
@@ -514,7 +544,7 @@ int flight_main(sem_t *IMU_sem){
 }
 
 void *flight_thread_func(sem_t *IMU_sem){
-	flight_thread_ret_val = flight_main(IMU_sem);
+	flight_thread_ret_val = flight_main(IMU_sem, &controller_data);
 	if (flight_thread_ret_val == -1){
 		rc_set_state(EXITING);
 	}
