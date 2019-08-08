@@ -31,7 +31,7 @@ int init_dsm_log()
 
     if(dsm_log == NULL)
     {
-        printf("Could not open an DSM log file!\n");
+        printio("Could not open an DSM log file!");
         return -1;
     }
     fprintf(dsm_log,"time ch1 ch2 ch3 ch4 ch5 ch6 ch7 ch8\n");
@@ -48,7 +48,7 @@ int log_dsm(){
 
     if(dsm_log == NULL)
     {
-        printf("Tried to write before DSM log file was created\n");
+        printio("Tried to write before DSM log file was created");
         return -1;
     }
     dsm_entry_t d;
@@ -81,7 +81,7 @@ int log_dsm(){
 // 	{
 // 		if (cbuffer_top(dsm_buffer, dsm))
 // 		{
-// 			printf("ERROR: failed to peek DSM buffer\n");
+// 			printio("ERROR: failed to peek DSM buffer");
 // 			return -1;
 // 		}
 // 	}

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <robotcontrol.h>
 #include "battery_thread.h"
+#include "io_thread.h"
 
 
 void get_voltage(battery_info * battery_levels) {
@@ -25,6 +26,6 @@ int battery_main() {
 static int battery_thread_ret_val;
 void* battery_thread_func() {
 	battery_thread_ret_val = battery_main();
-	if(battery_thread_ret_val) printf("battery_thread failed to initialize\n");
+	if(battery_thread_ret_val) printio("battery_thread failed to initialize");
 	return (void*)&battery_thread_ret_val;
 }

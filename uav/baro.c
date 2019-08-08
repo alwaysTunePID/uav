@@ -1,5 +1,6 @@
 #include "baro.h"
 #include "circular_buffer.h"
+#include "io_thread.h"
 #include <stdio.h>
 //global vars for bmp (barometer)
 #define		BMP_BUFFER_SIZE	  10
@@ -18,10 +19,10 @@ static int init_baro_log()
 
     if(baro_log == NULL)
     {
-        printf("Could not open an Barometer log file!\n");
+        printio("Could not open an Barometer log file!");
         return -1;
     }
-    fprintf(baro_log,"time temp_c alt_m pressure_pa\n");
+    fprintf(baro_log,"time temp_c alt_m pressure_pa");
     return 0;
 }
 
@@ -40,7 +41,7 @@ int log_baro(){
 
     if(baro_log == NULL)
     {
-        printf("Tried to write before baro log file was created\n");
+        printio("Tried to write before baro log file was created");
         return -1;
     }
     bmp_entry_t d;
@@ -89,7 +90,7 @@ int get_latest_baro(bmp_entry_t *baro)
     {
         if(cbuffer_top(bmp_buffer, baro))
         {
-            printf("ERROR: Failed to peek Baro bruffer\n");
+            printio("ERROR: Failed to peek Baro bruffer\n");
             return -1;
         }
     }

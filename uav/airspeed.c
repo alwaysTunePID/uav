@@ -5,6 +5,7 @@
 #include "circular_buffer.h"
 #include <stdio.h>
 #include "sys_log.h"
+#include "io_thread.h"
 
 #define max(a, b) \
     ({ __typeof__ (a) _a = (a); \
@@ -159,7 +160,7 @@ static uint32_t get_conversion(uint8_t command)
     int bytes = rc_i2c_read_bytes(I2C_BUS, 0, 3, val);
     if (bytes != 3)
     {
-        printf("Error no adc value\n");
+        printio("Error no adc value");
         return 0;
     }
 

@@ -159,8 +159,10 @@ static int init_controller_log_file(){
 	controller_log = fopen("controller.log", "w");
 
 	if (controller_log == NULL){
-		printf("Could not open a controller log file!\n");
+		printio("Could not open a controller log file!");
 		return -1;
+	} else {
+		printio("STATUS", 5);
 	}
 	//fprintf(controller_log," temp_c alt_m pressure_pa\n");
 	return 0;
@@ -179,7 +181,7 @@ static int close_controller_log(){
 int log_controller(esc_input_t *esc_input){
 
 	if (controller_log == NULL){
-		printf("Tried to write before controller log file was created\n");
+		printio("Tried to write before controller log file was created");
 		return -1;
 	}
 
@@ -231,17 +233,9 @@ void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_
 		*mean_g = (double)(mean_samples - 1) / ((double)mean_samples) * *mean_g + imu_data.accel[2]/ ((double)mean_samples);
 	}
 
-	printf("Pitch offset: ");
-	printf("%8.4f ", *mean_pitch_offset);
-	printf("\n");
-
-	printf("Roll offset: ");
-	printf("%8.4f ", *mean_roll_offset);
-	printf("\n");
-
-	printf("gravitational constant: ");
-	printf("%8.4f ", *mean_g);
-	printf("\n");
+	printio("Pitch offset: %8.4f", *mean_pitch_offset);
+	printio("Roll offset: %8.4f", *mean_roll_offset);
+	printio("Gravitational constant: %8.4f", *mean_g);
 
 	FILE* calibration_file = fopen("pitch_roll_offset.cal", "w");
 
@@ -265,17 +259,9 @@ void load_offset(double* mean_pitch_offset, double* mean_roll_offset, double* me
 	
 	fclose(calibration_file);
 
-	printf("Pitch offset: ");
-	printf("%8.4f ", *mean_pitch_offset);
-	printf("\n");
-
-	printf("Roll offset: ");
-	printf("%8.4f ", *mean_roll_offset);
-	printf("\n");
-
-	printf("gravitational constant: ");
-	printf("%8.4f ", *mean_g);
-	printf("\n");
+	printio("Pitch offset: %8.4f", *mean_pitch_offset);
+	printio("Roll offset: %8.4f", *mean_roll_offset);
+	printio("Gravitational constant: %8.4f", *mean_g);
 }
 
 // Used to update parameters live through the controller. UNUSED. NEEDS UPDATE
@@ -300,11 +286,11 @@ void load_offset(double* mean_pitch_offset, double* mean_roll_offset, double* me
 			T_d_p = T_d_p_0 + input_D * scale_d;
 			T_d_r = T_d_r_0 + input_D * scale_d;
 			//K_y = k_y_0 + input_Y * 0.001;
-			printf("New K_p is set %lf\n", K_p);
-			printf("New K_r is set %lf\n", K_r);
-			printf("New T_d_p is set %lf\n", T_d_p);
-			printf("New T_d_r is set %lf\n\n", T_d_r);
-			printf("New K_y is set %lf\n", K_y);
+			printio("New K_p is set %lf", K_p);
+			printio("New K_r is set %lf", K_r);
+			printio("New T_d_p is set %lf", T_d_p);
+			printio("New T_d_r is set %lf", T_d_r);
+			printio("New K_y is set %lf", K_y);
 		}
 		help = 0;
 	}
@@ -424,9 +410,7 @@ int flight_main(sem_t *IMU_sem){
 			// {
 			// 	get_latest_baro(&baro_data);
 			// 	alt_ref = baro_data.bmp_data.alt_m;
-			// 	printf("Baro ref alt: ");
-			// 	printf("%8.2f ", baro_data.bmp_data.alt_m);
-			// 	printf("\n");
+			// 	printio("Baro ref alt: %8.2f ", baro_data.bmp_data.alt_m);
 			// 	const_alt_active = 1;
 			// }
 		} else {
@@ -466,7 +450,7 @@ int flight_main(sem_t *IMU_sem){
 			} else {
 				if (rc_dsm_nanos_since_last_packet() > 20000000000) {
 					flight_mode = LANDED;
-					printf("\nEnter landed mode\n");
+					printio("Enter landed mode");
 					armed = 0;
 					thr = 0;
 				}
@@ -476,11 +460,11 @@ int flight_main(sem_t *IMU_sem){
 				// } else if (samples == 30){
 				// 	if (abs_fnc(mean_z_speed) < 0.4) {
 				// 		flight_mode = LANDED;
-				// 		printf("\nEnter landed mode\n");
+				// 		printio("Enter landed mode");
 				// 		armed = 0;
 				// 		thr = 0;
 				// 	}
-				// 	printf("\nmean_z_speed: %lf\n",mean_z_speed);
+				// 	printio("mean_z_speed: %lf",mean_z_speed);
 				// 	samples=0;
 				// } else {
 				// 	mean_z_speed = (double)(samples - 1) / ((double)samples)
@@ -493,14 +477,14 @@ int flight_main(sem_t *IMU_sem){
 		case LANDED:
 			if(!lost_dsm_connection() && battery_data.voltage > 10){
 				flight_mode = FLIGHT;
-				printf("\nEnter flight mode\n");
+				printio("Enter flight mode");
 			} 
 			break;
 
 		case FLIGHT:
 			if(lost_dsm_connection() || battery_data.voltage < 10){
 				flight_mode = DESCEND;
-				printf("\nEnter descend mode\n");
+				printio("Enter descend mode");
 				// PRINT A MESSAGE HERE!!
 				thr = DESCEND_THR;
 				pitch_ref = 0;

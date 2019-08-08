@@ -5,6 +5,7 @@
 #include "ubx.h"
 #include "ubx-nav.h"
 #include "circular_buffer.h"
+#include "io_thread.h"
 
 #define BAUDRATE 9600
 #define TIMEOUT 0.5
@@ -98,7 +99,7 @@ static void disable_nmea_message(int bus, char *message)
     tx_buf[27] = (uint8_t) '\r';
     tx_buf[28] = (uint8_t) '\n';
 
-    //printf("Send_bdduf %s\n",tx_buf);
+    //printio("Send_bdduf %s",tx_buf);
 
     rc_uart_write(bus,(uint8_t*) tx_buf, 29);
 
@@ -121,7 +122,7 @@ int initialize_gps(int bus)
 
     if (!(bus==1||bus==2))
     {
-        printf("ERROR: illegal bus number\n");
+        printio("ERROR: illegal bus number");
         return -1;
     }
 
@@ -200,7 +201,7 @@ int get_latest_pvt(gps_pvt_t *latestPvt)
     {
         if (cbuffer_top(gps_buffer, latestPvt))
         {
-            printf("ERROR: Failed to peek buffer\n");
+            printio("ERROR: Failed to peek buffer");
             return -1;
         }
     }
@@ -223,7 +224,7 @@ int gps_main(int bus)
     
     if (initialize_gps(bus) == -1)
     {
-        printf("ERROR: failed to initialize uart\n");
+        printio("ERROR: failed to initialize uart");
         return -1;
     }
 

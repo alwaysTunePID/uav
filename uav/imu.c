@@ -2,6 +2,7 @@
 #include <semaphore.h>
 #include "imu.h"
 #include "circular_buffer.h"
+#include "io_thread.h"
 #define IMU_BUFFER_SIZE   10
 
 
@@ -24,7 +25,7 @@ int init_imu_log()
 
 	if(imu_log == NULL)
    {
-		printf("Could not open an IMU log file!\n");   
+		printio("Could not open an IMU log file!");   
 		return -1;             
    }
    fprintf(imu_log,"time acc_x acc_y acc_z p q r mag_x mag_y mag_z temp pitch roll yaw\n");
@@ -112,7 +113,7 @@ int log_imu(){
 	
 	if(imu_log == NULL)
 	{
-		printf("Tried to write before imu log file was created\n");   
+		printio("Tried to write before imu log file was created");   
 		return -1;             
 	}
 	imu_entry_t d;
@@ -146,7 +147,7 @@ int get_latest_imu(imu_entry_t *imu)
 	{
 	if (cbuffer_top(imu_buffer, imu))
 	{
-		printf("ERROR: failed to peek IMU buffer\n");
+		printio("ERROR: failed to peek IMU buffer");
 		return -1;
 	}
 	}
