@@ -391,9 +391,11 @@ int flight_main(sem_t *IMU_sem){
 		
 		if (rc_dsm_ch_normalized(5) > 0.7){
 			armed = 1;
+			set_armed(1);//IO_THEAD
 			rc_led_set(RC_LED_RED, 1);
 		} else {
 			armed = 0;
+			set_armed(0);//IO_THREAD
 			rc_led_set(RC_LED_RED, 0);
 		}
 

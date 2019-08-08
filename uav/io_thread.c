@@ -26,6 +26,8 @@ static int errors = 0;
 static Queue messages;
 static int queue_initialized = 0;
 
+static int armed = 0;
+
 int block_main = 0;
 
 void calibration_sleep() {
@@ -68,6 +70,10 @@ void buffer(char* message) {
     while(strlen(message) < BUFFER_LENGTH) strcat(message, " ");
 }
 
+void set_armed(int in_armed) {
+    armed = in_armed;
+}
+
 int io_main(void) {
     queue_init(&messages, 100);
     queue_initialized = 1;
@@ -80,8 +86,8 @@ int io_main(void) {
         if(block_main) continue;
 
         char color[8];
-        char status[23];
-        char print[255];
+        char status[46];
+        char armed_msg[23];
 
         //Set battery color
         if(battery_data.voltage > 11.5 || battery_data.voltage < 0.1) strcpy(color, GREEN);//Will show 0.0 V when powered by USB.
@@ -92,6 +98,11 @@ int io_main(void) {
         if(errors > 0 || strcmp(color, RED) == 0) sprintf(status, "%s[ERROR]%s", RED, RESET_COLOR);
         else if (warnings > 0 ||strcmp(color, YELLOW) == 0) sprintf(status, "%s[WARN]%s", YELLOW, RESET_COLOR);
         else sprintf(status, "%s[OK]%s", GREEN, RESET_COLOR);
+
+        if(armed) sprintf(armed_msg, "%s[ARMED]%s", RED, RESET_COLOR);
+        else sprintf(armed_msg, "%s[SAFE]%s", GREEN, RESET_COLOR);
+
+        strcat(status, armed_msg);
 
         //Print
         if(queue_empty(&messages)) {
