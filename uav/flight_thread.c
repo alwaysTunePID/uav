@@ -462,7 +462,7 @@ int flight_main(sem_t *IMU_sem){
 		case DESCEND:
 			if(!lost_dsm_connection() && battery_data.voltage > 10){
 				flight_mode = FLIGHT;
-				printf("\nEnter flight mode\n");
+				printio("Enter flight mode");
 			} else {
 				if (rc_dsm_nanos_since_last_packet() > 20000000000) {
 					flight_mode = LANDED;

@@ -11,14 +11,17 @@ typedef struct Queue {
     unsigned int size;
     unsigned int head;
     unsigned int trail;
+    unsigned int message_size;
+    char message[255];
+    char **messages;
     char q[10][255];
     void* overfull;
 } Queue;
 
-void init(Queue* q);
-void push(Queue* q, char element[]);
-void pop(Queue* q, char* output);
-int empty(Queue* q);
-int full(Queue* q);
+void queue_init(Queue* q, unsigned int message_size);
+void queue_push(Queue* q, char element[]);
+void queue_pop(Queue* q, char* output);
+int queue_empty(Queue* q);
+int queue_full(Queue* q);
 
 #endif
