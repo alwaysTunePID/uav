@@ -9,10 +9,6 @@ void queue_init(Queue* q, unsigned int message_size) {
     //realloc(&(q->q), q->size * sizeof(q->q));
 }
 
-void add_message(Queue* q, char* element) {
-
-}
-
 void queue_push(Queue* q, char* element) {
 	if(!queue_full(q)) *(q->messages + (q->trail++ %q->size)) = element;
 }

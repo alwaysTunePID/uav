@@ -20,8 +20,6 @@ static uint64_t dsm_nanos = 0;
 static int warnings = 0;
 static int errors = 0;
 
-static double pval = 0.0;
-
 static Queue messages;
 static int queue_initialized = 0;
 
@@ -57,9 +55,9 @@ int io_main(void) {
 
         //Print
         if(queue_empty(&messages)) {
-            if(dsm_nanos == 0) printf("\r  %s Battery voltage: %s%.2lf%s V%s Z-speed: %.3lf", status, color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER, pval);
-            else if (dsm_nanos >= 18446744073) printf("\r  %s Battery voltage: %s%.2lf%s V DSM has not been connected. Z-speed: %.3lf", status, color, battery_data.voltage, RESET_COLOR, pval);
-            else printf("\r  %s Battery voltage: %s%.2lf%s V Seconds since last DSM packet: %.2f Z-speed: %.3lf", status, color, battery_data.voltage, RESET_COLOR, dsm_nanos/1000000000.0, pval);
+            if(dsm_nanos == 0) printf("\r  %s Battery voltage: %s%.2lf%s V%s", status, color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER);
+            else if (dsm_nanos >= 18446744073) printf("\r  %s Battery voltage: %s%.2lf%s V DSM has not been connected.", status, color, battery_data.voltage, RESET_COLOR);
+            else printf("\r  %s Battery voltage: %s%.2lf%s V Seconds since last DSM packet: %.2f", status, color, battery_data.voltage, RESET_COLOR, dsm_nanos/1000000000.0);
         } else {
             char message[255];
             queue_pop(&messages, message);
@@ -70,9 +68,9 @@ int io_main(void) {
                 printf("%s\n", message);
             }
 
-            if(dsm_nanos == 0) printf("  %s Battery voltage: %s%.2lf%s V%s Z-speed: %.3lf", status, color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER, pval);
-            else if (dsm_nanos >= 18446744073) printf("  %s Battery voltage: %s%.2lf%s V DSM has not been connected. Z-speed: %.3lf", status, color, battery_data.voltage, RESET_COLOR, pval);
-            else printf("  %s Battery voltage: %s%.2lf%s V Seconds since last DSM packet: %.2f Z-speed: %.3lf", status, color, battery_data.voltage, RESET_COLOR, dsm_nanos/1000000000.0, pval);
+            if(dsm_nanos == 0) printf("  %s Battery voltage: %s%.2lf%s V%s", status, color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER);
+            else if (dsm_nanos >= 18446744073) printf("  %s Battery voltage: %s%.2lf%s V DSM has not been connected.", status, color, battery_data.voltage, RESET_COLOR);
+            else printf("  %s Battery voltage: %s%.2lf%s V Seconds since last DSM packet: %.2f", status, color, battery_data.voltage, RESET_COLOR, dsm_nanos/1000000000.0);
         }
 		fflush(stdout);
     }
@@ -104,10 +102,6 @@ void dsm_signal_loss_warning(uint64_t time_ns) {
 void dsm_signal_restored() {
     if(dsm_nanos != 0) errors--;
     dsm_nanos = 0;
-}
-
-void update_value(double value) {
-    pval = value;
 }
 
 void printio(char* message) {
