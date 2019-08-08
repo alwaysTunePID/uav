@@ -133,11 +133,6 @@ static double abs_fnc(double n){
 	return n;
 }
 
-static double dead_zone(double n, double min){
-	if (abs_fnc(n) < min) return 0;
-	return n;
-}
-
 static int lost_dsm_connection(){
 	return rc_dsm_nanos_since_last_packet() > 1000000000;
 }
