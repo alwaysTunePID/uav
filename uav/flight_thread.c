@@ -226,9 +226,9 @@ void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_
 		*mean_g = (double)(mean_samples - 1) / ((double)mean_samples) * *mean_g + imu_data.accel[2]/ ((double)mean_samples);
 	}
 
-	printio("Pitch offset: %8.4f", *mean_pitch_offset);
-	printio("Roll offset: %8.4f", *mean_roll_offset);
-	printio("Gravitational constant: %8.4f", *mean_g);
+	printio("Pitch offset:\t\t\t%.4f", *mean_pitch_offset);
+	printio("Roll offset:\t\t\t%.4f", *mean_roll_offset);
+	printio("Gravitational constant:\t%.4f", *mean_g);
 
 	FILE* calibration_file = fopen("pitch_roll_offset.cal", "w");
 
@@ -252,9 +252,9 @@ void load_offset(double* mean_pitch_offset, double* mean_roll_offset, double* me
 	
 	fclose(calibration_file);
 
-	printio("Pitch offset: %8.4f", *mean_pitch_offset);
-	printio("Roll offset: %8.4f", *mean_roll_offset);
-	printio("Gravitational constant: %8.4f", *mean_g);
+	printio("Pitch offset:\t\t%.4f", *mean_pitch_offset);
+	printio("Roll offset:\t\t%.4f", *mean_roll_offset);
+	printio("Gravitational constant:\t%.4f", *mean_g);
 }
 
 // Used to update parameters live through the controller. UNUSED. NEEDS UPDATE
