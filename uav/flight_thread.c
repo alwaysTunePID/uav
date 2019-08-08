@@ -243,7 +243,7 @@ void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_
 	printf("%8.4f ", *mean_g);
 	printf("\n");
 
-	FILE* calibration_file = fopen("pitch_roll_offest.cal", "w");
+	FILE* calibration_file = fopen("pitch_roll_offset.cal", "w");
 
 	if (calibration_file == NULL){
 		fprintf(stderr, "Could not open a calibration file!\n");
@@ -255,7 +255,7 @@ void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_
 }
 
 void load_offset(double* mean_pitch_offset, double* mean_roll_offset, double* mean_g) {
-	FILE* calibration_file = fopen("pitch_roll_offest.cal", "r");
+	FILE* calibration_file = fopen("pitch_roll_offset.cal", "r");
 
 	if (calibration_file == NULL){
 		fprintf(stderr, "Could not open a calibration file! Use flag -c if you have not created one.\n");
@@ -269,7 +269,7 @@ void load_offset(double* mean_pitch_offset, double* mean_roll_offset, double* me
 	printf("%8.4f ", *mean_pitch_offset);
 	printf("\n");
 
-	printf("Rolll offset: ");
+	printf("Roll offset: ");
 	printf("%8.4f ", *mean_roll_offset);
 	printf("\n");
 
