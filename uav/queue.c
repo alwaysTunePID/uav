@@ -9,17 +9,16 @@ void queue_init(Queue* q, unsigned int message_size) {
     //realloc(&(q->q), q->size * sizeof(q->q));
 }
 
+void add_message(Queue* q, char* element) {
 
-void increase_message_size(char** messages, int size) {
-	realloc(messages, 10 * sizeof(*messages));
 }
 
 void queue_push(Queue* q, char* element) {
-	messages+(q->trail++ %q->size) = element
+	if(!queue_full(q)) *(q->messages + (q->trail++ %q->size)) = element;
 }
 
 void queue_pop(Queue* q, char* output) {
-	strcpy(output, *(messages + (q->head++ % q->size)));
+	if(!queue_empty(q)) strcpy(output, *(q->messages + (q->head++ % q->size)));
 }
 
 int queue_empty(Queue* q) {

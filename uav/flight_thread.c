@@ -439,7 +439,7 @@ int flight_main(sem_t *IMU_sem){
 		case DESCEND:
 			if(!lost_dsm_connection()){
 				flight_mode = FLIGHT;
-				printf("\nEnter flight mode\n");
+				printio("Enter flight mode");
 			} else {
 				// Calculates a mean of z-acceleration
 				if  (samples == 0){
@@ -448,7 +448,7 @@ int flight_main(sem_t *IMU_sem){
 				} else if (samples == 30){
 					if (abs_fnc(mean_z_speed) < 0.4) {
 						flight_mode = LANDED;
-						printf("\nEnter landed mode\n");
+						printio("Enter landed mode");
 						armed = 0;
 						thr = 0;
 					}

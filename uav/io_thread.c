@@ -4,6 +4,7 @@
 #include "queue.h"
 #include <robotcontrol.h>
 #include <unistd.h>
+#include <stdio.h>
 
 
 #define GREEN "\033[1;32m"
@@ -27,11 +28,14 @@ static int queue_initialized = 0;
 int block_main = 0;
 
 int io_main(void) {
-    queue_init(&messages);
+    queue_init(&messages, 10);
+    queue_initialized = 1;
 
 	sleep(1);
 
-    prinf("\n");
+    printf("\n");
+
+    printio("test");
 
     while (rc_get_state() != EXITING) {
         rc_usleep(500000);
@@ -106,7 +110,7 @@ void update_value(double value) {
     pval = value;
 }
 
-void printio(char message[]) {
+void printio(char* message) {
     while(!queue_initialized) sleep(1);
     queue_push(&messages, message);
 }
