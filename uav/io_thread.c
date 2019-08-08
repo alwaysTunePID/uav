@@ -15,6 +15,7 @@
 #define RESET_COLOR "\033[0m"
 
 #define SPACE_BUFFER "                                                  "
+#define BUFFER_LENGTH 110
 
 static int io_thread_ret_val;
 static uint64_t dsm_nanos = 0;
@@ -63,6 +64,10 @@ void printio(const char* fmt, ...) {
     queue_push(&messages, message);
 }
 
+void buffer(char* message) {
+    while(strlen(message) < BUFFER_LENGTH) strcat(message, " ");
+}
+
 int io_main(void) {
     queue_init(&messages, 100);
     queue_initialized = 1;
@@ -76,6 +81,7 @@ int io_main(void) {
 
         char color[8];
         char status[23];
+        char print[255];
 
         //Set battery color
         if(battery_data.voltage > 11.5 || battery_data.voltage < 0.1) strcpy(color, GREEN);//Will show 0.0 V when powered by USB.
@@ -89,16 +95,18 @@ int io_main(void) {
 
         //Print
         if(queue_empty(&messages)) {
-            if(dsm_nanos == 0) printf("\r  %s Battery voltage: %s%.2lf%s V%s", status, color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER);
+            if(dsm_nanos == 0) printf("\r  %s Battery voltage: %s%.2lf%s V%s", status, color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER);//TODO Remove SPACE_BUFFER and use buffer() instead
             else if (dsm_nanos >= 18446744073) printf("\r  %s Battery voltage: %s%.2lf%s V DSM has not been connected.", status, color, battery_data.voltage, RESET_COLOR);
             else printf("\r  %s Battery voltage: %s%.2lf%s V Seconds since last DSM packet: %.2f", status, color, battery_data.voltage, RESET_COLOR, dsm_nanos/1000000000.0);
         } else {
             char message[255];
             queue_pop(&messages, message);
-            printf("\r%s  \n", message);//TODO, calculate correct number of spaces depending on txet length
+            buffer(message);
+            printf("\r%s  \n", message);
 
             while(!queue_empty(&messages)) {
                 queue_pop(&messages, message);
+                buffer(message);
                 printf("%s\n", message);
             }
 
