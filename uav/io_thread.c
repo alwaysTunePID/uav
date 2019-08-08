@@ -5,6 +5,8 @@
 #include <robotcontrol.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
 
 
 #define GREEN "\033[1;32m"
@@ -25,15 +27,52 @@ static int queue_initialized = 0;
 
 int block_main = 0;
 
+void calibration_sleep() {
+    block_main++;
+    sleep(1);
+    char loading[30] = "#.............................";
+    for(int i = 1; i < 30 && rc_get_state() != EXITING; i++) {
+        loading[i] = '#';
+        printf("\r  IMU waking up [%s] %d s / 30 s", loading, (i+1));
+        fflush(stdout);
+        sleep(1);
+    }
+
+    printf("\r  IMU waking up [%s] Done!       \n", loading);
+    fflush(stdout);
+    block_main--;
+}
+
+void dsm_signal_loss_warning(uint64_t time_ns) {
+    if(dsm_nanos == 0) errors++;
+    dsm_nanos = time_ns;
+}
+
+void dsm_signal_restored() {
+    if(dsm_nanos != 0) errors--;
+    dsm_nanos = 0;
+}
+
+void printio(const char* fmt, ...) {
+    char message[255];
+    va_list args;
+    va_start(args, fmt);
+    vsprintf(message, fmt, args);
+
+    while(!queue_initialized) sleep(1);
+    queue_push(&messages, message);
+}
+
 int io_main(void) {
-    queue_init(&messages, 10);
+    queue_init(&messages, 100);
     queue_initialized = 1;
+    queue_push(&messages, "TESTMESSAGE");
 
 	sleep(1);
 
-    printf("\n");
-
-    printio("test");
+    printio("Yes");
+    printio("TEST %d", 42);
+    printio("No?");
 
     while (rc_get_state() != EXITING) {
         rc_usleep(500000);
@@ -76,37 +115,6 @@ int io_main(void) {
     }
 
     return 0;
-}
-
-void calibration_sleep() {
-    block_main++;
-    sleep(1);
-    char loading[30] = "#.............................";
-    for(int i = 1; i < 30 && rc_get_state() != EXITING; i++) {
-        loading[i] = '#';
-        printf("\r  IMU waking up [%s] %d s / 30 s", loading, (i+1));
-        fflush(stdout);
-        sleep(1);
-    }
-
-    printf("\r  IMU waking up [%s] Done!       \n", loading);
-    fflush(stdout);
-    block_main--;
-}
-
-void dsm_signal_loss_warning(uint64_t time_ns) {
-    if(dsm_nanos == 0) errors++;
-    dsm_nanos = time_ns;
-}
-
-void dsm_signal_restored() {
-    if(dsm_nanos != 0) errors--;
-    dsm_nanos = 0;
-}
-
-void printio(char* message) {
-    while(!queue_initialized) sleep(1);
-    queue_push(&messages, message);
 }
 
 void *io_thread_func(void) {
