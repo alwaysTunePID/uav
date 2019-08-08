@@ -161,8 +161,6 @@ static int init_controller_log_file(){
 	if (controller_log == NULL){
 		printio("Could not open a controller log file!");
 		return -1;
-	} else {
-		printio("STATUS", 5);
 	}
 	//fprintf(controller_log," temp_c alt_m pressure_pa\n");
 	return 0;

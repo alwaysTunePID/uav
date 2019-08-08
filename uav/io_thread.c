@@ -66,13 +66,8 @@ void printio(const char* fmt, ...) {
 int io_main(void) {
     queue_init(&messages, 100);
     queue_initialized = 1;
-    queue_push(&messages, "TESTMESSAGE");
 
 	sleep(1);
-
-    printio("Yes");
-    printio("TEST %d", 42);
-    printio("No?");
 
     while (rc_get_state() != EXITING) {
         rc_usleep(500000);
