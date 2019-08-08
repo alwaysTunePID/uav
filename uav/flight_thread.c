@@ -23,7 +23,7 @@ Could be "to many uses of get_latest_dsm"?
 
 
 */
-#define DESCEND_THR 0.4
+#define DESCEND_THR 0.58// With 0.6 it landed gracefully (but bonced on the floor)
 #define MIN_ERROR 0.3
 #define MAX_I 0.4
 #define FREQUENCY 200.0
@@ -104,13 +104,17 @@ static double K_pa_p = 2.0;
 static double K_pa_r = 2.0;
 //static double K_pa_y = 3.0;
 
-static double K_ia_p = 0.002*5.0;
-static double K_ia_r = 0.002*5.0;
+static double K_ia_p = 0.002*5.0; // Increase these
+static double K_ia_r = 0.002*5.0; // Increase these
 //static double K_ia_y = 0.002*4.0;
 
 static double I_a_p = 0.0;
 static double I_a_r = 0.0;
 //static double I_a_y = 0.0;
+
+
+static double P_a_p = 0.0;
+static double P_a_r = 0.0;
 
 
 // ----------------------------------------------------------------------------------------
@@ -193,8 +197,8 @@ int log_controller(esc_input_t *esc_input){
 			r_rate,
 			I_a_p,
 			I_a_r,
-			v_p,
-			v_r);
+			P_a_p,
+			P_a_r);
 	// fprintf(controller_log, "%f %f\n", pitch, roll);
 	return 0;
 }
@@ -340,6 +344,7 @@ void rate_PID(esc_input_t *esc_input, double thr){
 
 }
 
+
 void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
 	double p_angle_error = clip(*pitch_ref - pitch, -70.0, 70.0);
 	double r_angle_error = clip(*roll_ref - roll, -70.0, 70.0);
@@ -354,9 +359,11 @@ void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
 	I_a_p = clip(I_a_p, -MAX_I, MAX_I);
 	I_a_r = clip(I_a_r, -MAX_I, MAX_I);
 	//I_a_y = clip(I_a_y, -MAX_I, MAX_I);
+	P_a_p = K_pa_p * p_angle_error;
+	P_a_r = K_pa_r * r_angle_error;
 
-	pitch_rate_ref = K_pa_p * p_angle_error + I_a_p;
- 	roll_rate_ref = K_pa_r * r_angle_error + I_a_r;
+	pitch_rate_ref =  P_a_p + I_a_p;
+ 	roll_rate_ref =  P_a_r + I_a_r;
 	yaw_rate_ref = *yaw_ref;
 
 }
@@ -439,7 +446,7 @@ int flight_main(sem_t *IMU_sem){
 
 		switch (flight_mode) {
 		case DESCEND:
-			if(!lost_dsm_connection() && battery_data.voltage > 10){
+			if(!lost_dsm_connection() && rc_dsm_ch_normalized(6) <= 0.7){
 				flight_mode = FLIGHT;
 				printio("Enter flight mode");
 			} else {
@@ -470,14 +477,14 @@ int flight_main(sem_t *IMU_sem){
 			break;
 
 		case LANDED:
-			if(!lost_dsm_connection() && battery_data.voltage > 10){
+			if(!lost_dsm_connection() && rc_dsm_ch_normalized(6) <= 0.7){
 				flight_mode = FLIGHT;
 				printio("Enter flight mode");
 			} 
 			break;
 
 		case FLIGHT:
-			if(lost_dsm_connection() || battery_data.voltage < 10){
+			if(lost_dsm_connection() || rc_dsm_ch_normalized(6) > 0.7){
 				flight_mode = DESCEND;
 				printio("Enter descend mode");
 				// PRINT A MESSAGE HERE!!
@@ -487,6 +494,7 @@ int flight_main(sem_t *IMU_sem){
 				yaw_ref = 0;
 			} else {
 				thr = rc_dsm_ch_normalized(1);
+				update_value(thr);
 				// bound the signal to the escs
 				if (thr < -0.1) thr = -0.1;
 				if (thr > 1.0) thr = 1.0;

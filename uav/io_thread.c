@@ -56,6 +56,12 @@ void dsm_signal_restored() {
     dsm_nanos = 0;
 }
 
+static double pval = 0;
+
+void update_value(double a) {
+    pval = a;
+}
+
 void printio(const char* fmt, ...) {
     char message[255];
     va_list args;
@@ -106,7 +112,7 @@ int io_main(void) {
 
         //Print
         if(queue_empty(&messages)) {
-            if(dsm_nanos == 0) printf("\r  %s Battery voltage: %s%.2lf%s V%s", status, color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER);//TODO Remove SPACE_BUFFER and use buffer() instead
+            if(dsm_nanos == 0) printf("\r  %s Battery voltage: %s%.2lf%s V THR: %lf%s", status, color, battery_data.voltage, RESET_COLOR, pval, SPACE_BUFFER);//TODO Remove SPACE_BUFFER and use buffer() instead
             else if (dsm_nanos >= 18446744073) printf("\r  %s Battery voltage: %s%.2lf%s V DSM has not been connected.", status, color, battery_data.voltage, RESET_COLOR);
             else printf("\r  %s Battery voltage: %s%.2lf%s V Seconds since last DSM packet: %.2f", status, color, battery_data.voltage, RESET_COLOR, dsm_nanos/1000000000.0);
         } else {
