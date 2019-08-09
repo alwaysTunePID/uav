@@ -84,8 +84,8 @@ int controller_data_main() {
     //motor, imu_data, errors, PID, reference
     // can init more files if more data is needed
     // create more file pointers for more data
-    return init_file("PID",&PID);
-    return //init_file("errors",&errors);
+    if(init_file("PID",&PID)) return -1;
+    //return init_file("errors",&errors);
 
     while(rc_get_state()!=EXITING){
         print_data("PID",&controller_data,&PID);

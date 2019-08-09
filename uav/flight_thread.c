@@ -332,7 +332,6 @@ void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref, controller_
 // --------------------------------------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------------------------------------
 int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
-	
 	flight_mode_t flight_mode = FLIGHT;
 	// int samples = 0;
 	// double mean_z_speed = 0;
@@ -348,12 +347,20 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 	// double z_speed = 0;
 	double thr = 0; // normalized throttle
 
-	//Calibrate
-	if(calibrate) calibrate_IMU(IMU_sem, &mean_pitch_offset, &mean_roll_offset, &mean_g);
-	else load_offset(&mean_pitch_offset, &mean_roll_offset, &mean_g);
-
 	int sent_arming_error = 0;
 	int sent_dsm_prevent_descent_waring = 0;
+	int sent_imu_wake_warning = 0;
+
+	//Calibrate
+	u_int64_t time_since_wake = 0;
+
+	if(calibrate) calibrate_IMU(IMU_sem, &mean_pitch_offset, &mean_roll_offset, &mean_g);
+	else  {
+		load_offset(&mean_pitch_offset, &mean_roll_offset, &mean_g);
+		set_warning("IMU waking up. It is not recommended to fly within 30 seconds of startup.");
+		time_since_wake = rc_nanos_since_epoch();
+		sent_imu_wake_warning = 1;
+	}
 
 	sleep(1);
 
@@ -368,6 +375,10 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 	}
 
 	while (rc_get_state() != EXITING){
+		if(sent_imu_wake_warning && time_since_wake + 30000000000 < rc_nanos_since_epoch()) {
+			resolve_warning();
+			sent_imu_wake_warning = 0;
+		}
 		
 		if(!armed && rc_dsm_ch_normalized(1) > 0.0000000001 && rc_dsm_ch_normalized(5) > 0.7) {
 			if(!sent_arming_error) {
