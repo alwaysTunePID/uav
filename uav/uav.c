@@ -12,6 +12,7 @@
 #include "io_thread.h"
 #include "battery_thread.h"
 #include "controller_data_thread.h"
+#include "ros_thread.h"
 // threads  
 
 static pthread_t i2c_thread;
@@ -25,6 +26,7 @@ static pthread_t io_thread;
 static pthread_t battery_thread;
 static pthread_t controller_data_thread;
 //static pthread_t test_thread;
+static pthread_t ros_thread;
 
 int calibrate = 0;
 int manual_mode = 0;
@@ -173,6 +175,11 @@ int main(int argc, char *argv[])
     if(rc_pthread_create(&controller_data_thread, controller_data_func, NULL, SCHED_OTHER, 0)){
         fprintf(stderr, "ERROR: Failed to start input/output thread \n");
     }
+
+    if(rc_pthread_create(&ros_thread, ros_thread_func, NULL, SCHED_OTHER, 0)) {
+        fprintf(stderr, "ERROR: Failed to start ROS thread \n");
+    }
+
     // Sleep and let threads work
     while(rc_get_state()==RUNNING){
         rc_usleep(10000);
@@ -242,6 +249,12 @@ int main(int argc, char *argv[])
 	    fprintf(stderr, "ERROR: Input_thread timed out\n");
 	}
 	printf("Test thread returned:%d\n", *(int*)thread_retval);
+
+    ret = rc_pthread_timed_join(ros_thread, &thread_retval, 1.5);
+    if(ret == 1) {
+        fprintf(stderr, "ERROR: ROS thread timed out\n");
+    }
+    printf("ROS thread returned:%d\n", *(int*)thread_retval);
 
 	
 
