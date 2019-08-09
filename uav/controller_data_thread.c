@@ -77,7 +77,7 @@ void print_data(char* data, controller_data_t* controller_data) {
 
 int controller_data_main() {
     //motor, imu_data, errors, PID, reference
-    char* data_selection="imu_data";
+    char* data_selection="PID";
     if(init_file(data_selection)) return -1;
     while(rc_get_state()!=EXITING){
         print_data(data_selection,&controller_data);
