@@ -3,10 +3,16 @@
 #include <stdio.h>
 #include <robotcontrol.h>
 
-FILE* file;
+
+FILE* imu_data;
+FILE* PID;
+FILE* errors;
+FILE* reference;
+FILE* motors;
 
 
-static int init_file(char* data){
+
+static int init_file(char* data, FILE* file){
     char filename[30];
     sprintf(filename,"controller_%s.log",data);
     printf("%s",filename);
@@ -18,13 +24,13 @@ static int init_file(char* data){
     return 0;
 }
 
-static int close_file() {
+static int close_file(FILE* file) {
     if(file == NULL) return -1;
     fclose(file);
     return 0;
 }
 
-void print_data(char* data, controller_data_t* controller_data) {
+void print_data(char* data, controller_data_t* controller_data, FILE* file) {
     if(!strcmp(data, "motor")){
         fprintf(file, "%lf %lf %lf %lf\n",
         controller_data->v_signals[0],
@@ -77,14 +83,15 @@ void print_data(char* data, controller_data_t* controller_data) {
 
 int controller_data_main() {
     //motor, imu_data, errors, PID, reference
+    // can init more files if more data is needed
     char* data_selection="PID";
-    if(init_file(data_selection)) return -1;
+    if(init_file(data_selection,PID)) return -1;
     while(rc_get_state()!=EXITING){
-        print_data(data_selection,&controller_data);
+        print_data(data_selection,&controller_data,PID);
         rc_usleep(100000);
 
     }
-    close_file();
+    close_file(PID);
     return 0;
 }
 
