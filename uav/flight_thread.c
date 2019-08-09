@@ -353,6 +353,7 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 	else load_offset(&mean_pitch_offset, &mean_roll_offset, &mean_g);
 
 	int sent_arming_error = 0;
+	int sent_dsm_prevent_descent_waring = 0;
 
 	sleep(1);
 
@@ -487,15 +488,26 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 			break;
 
 		case FLIGHT:
-			if(lost_dsm_connection() || rc_dsm_ch_normalized(6) > 0.7){
-				flight_mode = DESCEND;
-				printio("Enter descend mode");
-				// PRINT A MESSAGE HERE!!
-				thr = DESCEND_THR;
-				pitch_ref = 0;
-				roll_ref = 0;
-				yaw_ref = 0;
+			if(lost_dsm_connection() || rc_dsm_ch_normalized(6) > 0.7) {
+				if(thr <= 0.0000000001) {
+					if(!sent_dsm_prevent_descent_waring) {
+						set_warning("Won't enable DEDCEND-mode beacuse thottle was 0.0");
+						sent_dsm_prevent_descent_waring = 1;
+					}
+				} else {
+					flight_mode = DESCEND;
+					printio("Enter descend mode");
+					thr = DESCEND_THR;
+					pitch_ref = 0;
+					roll_ref = 0;
+					yaw_ref = 0;
+				}
 			} else {
+				if(sent_dsm_prevent_descent_waring) {
+					resolve_warning();
+					sent_dsm_prevent_descent_waring = 0;
+				}
+
 				thr = rc_dsm_ch_normalized(1);
 				update_value(thr);
 				// bound the signal to the escs

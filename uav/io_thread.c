@@ -104,13 +104,16 @@ void resolve_error() {
 
 void printio(const char* fmt, ...) {
     char message[255];
+    char output[255];
     va_list args;
     va_start(args, fmt);
     vsprintf(message, fmt, args);
     va_end(args);
 
+    sprintf(output, "  [INFO] %s", message);
+
     while(!queue_initialized) sleep(1);
-    queue_push(&messages, message);
+    queue_push(&messages, output);
 }
 
 void buffer(char* message) {
