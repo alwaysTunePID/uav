@@ -352,14 +352,44 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 	if(calibrate) calibrate_IMU(IMU_sem, &mean_pitch_offset, &mean_roll_offset, &mean_g);
 	else load_offset(&mean_pitch_offset, &mean_roll_offset, &mean_g);
 
+	int sent_arming_error = 0;
+
+	sleep(1);
+
+	if(rc_dsm_ch_normalized(5) > 0.7) {
+		set_error("Drone must be disarmed at startup.");
+
+		while(rc_get_state() != EXITING && rc_dsm_ch_normalized(5) > 0.7) rc_usleep(1000000);
+		
+		resolve_error();
+	} else {
+		printio("Disarmed");
+	}
 
 	while (rc_get_state() != EXITING){
 		
-		if (rc_dsm_ch_normalized(5) > 0.7){
+		if(!armed && rc_dsm_ch_normalized(1) > 0.0000000001 && rc_dsm_ch_normalized(5) > 0.7) {
+			if(!sent_arming_error) {
+				set_error("Could not arm, throttle was %.2lf", rc_dsm_ch_normalized(1));
+				sent_arming_error = 1;
+			}
+
+			armed = 0;
+		} else if (rc_dsm_ch_normalized(5) > 0.7){
+			if(sent_arming_error) {
+				resolve_error();
+				sent_arming_error = 0;
+			}
+
 			armed = 1;
 			set_armed(1);//IO_THEAD
 			rc_led_set(RC_LED_RED, 1);
 		} else {
+			if(sent_arming_error) {
+				resolve_error();
+				sent_arming_error = 0;
+			}
+			
 			armed = 0;
 			set_armed(0);//IO_THREAD
 			rc_led_set(RC_LED_RED, 0);
@@ -447,6 +477,9 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 			break;
 
 		case LANDED:
+			armed = 0;
+			thr = 0;
+
 			if(!lost_dsm_connection() && rc_dsm_ch_normalized(6) <= 0.7){
 				flight_mode = FLIGHT;
 				printio("Enter flight mode");
@@ -481,7 +514,7 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 			rate_PID(&esc_input,thr, controller_data);
 		}
 
-		if (armed){
+		if(armed) {
 			rc_servo_send_esc_pulse_normalized(1, esc_input.u_1);
 			rc_servo_send_esc_pulse_normalized(3, esc_input.u_2);
 			rc_servo_send_esc_pulse_normalized(5, esc_input.u_3);
