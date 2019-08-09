@@ -318,7 +318,7 @@ void rate_PID(esc_input_t *esc_input, double thr, controller_data_t* controller_
 
 	controller_data->rate_errors[0] = r_rate_error;
 	controller_data->rate_errors[1] = p_rate_error;
-	controller_data->rate_errors[2 = y_rate_error;
+	controller_data->rate_errors[2]= y_rate_error;
 
 
 	v_p = K_pr_p * p_rate_error;

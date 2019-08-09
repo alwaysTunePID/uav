@@ -6,10 +6,8 @@
 FILE* file;
 
 
-static int init_file(char* type){
-    char*filename;
-    sprintf(filename,"controller_%s.log",type);
-    file = fopen(filename, 'w');
+static int init_file(){
+    file = fopen("controller.log", 'w');
     if(file == NULL) {
         printf("Failed to open file");
         return -1;
@@ -74,7 +72,7 @@ void print_data(char* data, controller_data_t* controller_data) {
 }
 
 int controller_data_main() {
-    if(init_file("PID")) return -1;
+    if(init_file()) return -1;
     char* data_selection="PID";
     while(rc_get_state()!=EXITING){
         print_data(data_selection,&controller_data);

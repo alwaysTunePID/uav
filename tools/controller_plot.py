@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-file_name = "controller.log"
+data = input("data:")
+file_name = f"controller_{data}.log"
 
 # Open file_name safely and store data as a matrix
 with open(file_name) as file:
@@ -21,20 +22,21 @@ font = {'family': 'serif',
         }
 
 counter = 0
-loop_length = int(data.shape[1]/2)
+loop_length = int(data.shape[1])
 print(loop_length)
-labels = ['u1 v1','u2 v2',
-        'u3 v3','u4 v4',
-        'pitch roll', 'Ppitch Proll',
-        'I_a_p I_a_r', 'K-del rate loop'
-        ]
+# labels = ['u1 v1','u2 v2',
+#         'u3 v3','u4 v4',
+#         'pitch roll', 'Ppitch Proll',
+#         'I_a_p I_a_r', 'K-del rate loop'
+#         ]
+label = '(v1v2v3v4)(roll,pitch,yaw*(angle/rate/errors)(PID*(angle/rate/integral)'
 for i in range(loop_length):
     plt.figure()
     plt.plot(time, data[:,counter],'b')
     counter +=1
-    plt.plot(time, data[:,counter],'orange')
-    counter+=1
-    plt.title(labels[i], fontdict=font)
+#     plt.plot(time, data[:,counter],'orange')
+#     counter+=1
+    plt.title(label, fontdict=font)
 
 plt.show()
 
