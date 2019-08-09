@@ -62,14 +62,58 @@ void update_value(double a) {
     pval = a;
 }
 
-void printio(const char* fmt, ...) {
+void set_warning(const char* fmt, ...) {
     char message[255];
+    char output[255];
     va_list args;
     va_start(args, fmt);
     vsprintf(message, fmt, args);
+    va_end(args);
+
+    sprintf(output, "  %s[WARN]%s %s", YELLOW, RESET_COLOR, message);
 
     while(!queue_initialized) sleep(1);
-    queue_push(&messages, message);
+    queue_push(&messages, output);
+
+    warnings++;
+}
+
+void resolve_warning() {
+    warnings--;
+}
+
+void set_error(const char* fmt, ...) {
+    char message[255];
+    char output[255];
+    va_list args;
+    va_start(args, fmt);
+    vsprintf(message, fmt, args);
+    va_end(args);
+
+    sprintf(output, "  %s[ERROR]%s %s", RED, RESET_COLOR, message);
+
+    while(!queue_initialized) sleep(1);
+    queue_push(&messages, output);
+
+    errors++;
+}
+
+void resolve_error() {
+    errors--;
+}
+
+void printio(const char* fmt, ...) {
+    char message[255];
+    char output[255];
+    va_list args;
+    va_start(args, fmt);
+    vsprintf(message, fmt, args);
+    va_end(args);
+
+    sprintf(output, "  [INFO] %s", message);
+
+    while(!queue_initialized) sleep(1);
+    queue_push(&messages, output);
 }
 
 void buffer(char* message) {
