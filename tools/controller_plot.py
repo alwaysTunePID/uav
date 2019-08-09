@@ -23,7 +23,7 @@ data_labels = {
         'errors': ['roll angle error', 'pitch angle error',
                 'roll rate error', 'pitch rate error', 'yaw rate error'],
         'PID': ['k roll angle', 'k pitch angle',
-            'roll rate pid', 'pitch rate pid', 'yaw rate pid'],
+            'roll rate pid', 'pitch rate pid', 'yaw rate pid','Integral r','Integral p'],
         'references': ['roll rate ref', 'pitch rate ref', 'yaw rate ref'],
     }
 
@@ -36,6 +36,7 @@ for file_name in file_names:
     time = np.transpose(ts*np.arange(0, length))
     counter = 0
     loop_length = int(data.shape[1])
+    print(loop_length)
     for i in range(loop_length):
         plt.figure()
         plt.plot(time, data[:,counter],'b')
