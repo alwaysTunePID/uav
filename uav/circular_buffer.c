@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include "offset_memcpy.h"
+#include "io_thread.h"
 
 
 struct cbuffer_t {
@@ -34,7 +35,7 @@ int cbuffer_init(cbuffer_handle_t cbuf,size_t _max_elements,size_t _element_size
 
     if (pthread_mutex_init(&cbuf->lock, NULL) != 0)
     {
-        printf("Mutex init failed.\n");
+        printio("Mutex init failed.");
         return -1;
     }
 
@@ -44,7 +45,7 @@ int cbuffer_init(cbuffer_handle_t cbuf,size_t _max_elements,size_t _element_size
 
 void cbuffer_buf_reset(cbuffer_handle_t cbuf)
 {
-    if(cbuf->print) printf("Reset buffer\n");
+    if(cbuf->print) printio("Reset buffer");
     cbuf->write_pos = 0;
     cbuf->read_pos = 0;
     cbuf->full = false;
@@ -53,12 +54,12 @@ void cbuffer_buf_reset(cbuffer_handle_t cbuf)
 void cbuffer_enable_print_outs(cbuffer_handle_t cbuf)
 {
     cbuf->print = true;
-    if(cbuf->print) printf("Print out enabled\n");
+    if(cbuf->print) printio("Print out enabled");
 }
 
 void cbuffer_disable_print_outs(cbuffer_handle_t cbuf)
 {
-    if(cbuf->print) printf("Print out disabled\n");
+    if(cbuf->print) printio("Print out disabled");
     cbuf->print = false;
 
 }
@@ -66,7 +67,7 @@ void cbuffer_disable_print_outs(cbuffer_handle_t cbuf)
 
 int cbuffer_free(cbuffer_handle_t cbuf)
 {
-    if(cbuf->print) printf("Freeing buffer\n");
+    if(cbuf->print) printio("Freeing buffer");
     free(cbuf->buffer);
     pthread_mutex_destroy(&cbuf->lock);
     free(cbuf);
@@ -104,14 +105,14 @@ size_t cbuffer_size(cbuffer_handle_t cbuf)
             size = (cbuf->max_elements + cbuf->write_pos - cbuf->read_pos);
         }
     }
-    if(cbuf->print) printf("Query of size. Size is %u\n",size);
+    if(cbuf->print) printio("Query of size. Size is %u",size);
     return size;
 }
 
 // helper function for advancing write position and read position if buffer is full
 static void advance_pointer(cbuffer_handle_t cbuf)
 {
-    if(cbuf->print) printf("Advancing pointer\n");
+    if(cbuf->print) printio("Advancing pointer");
 
     if(cbuf->full)
     {
@@ -123,14 +124,14 @@ static void advance_pointer(cbuffer_handle_t cbuf)
 
     if (cbuf->full)
     {
-        if(cbuf->print) printf("Buffer is now full\n");
+        if(cbuf->print) printio("Buffer is now full");
     }
 }
 
 // helper function for advancing read position
 static void retreat_pointer(cbuffer_handle_t cbuf)
 {
-    if(cbuf->print) printf("Retreating pointer\n");
+    if(cbuf->print) printio("Retreating pointer");
     cbuf->full = false;
     cbuf->read_pos = (cbuf->read_pos + 1) % cbuf->max_elements;
 }
@@ -138,15 +139,15 @@ static void retreat_pointer(cbuffer_handle_t cbuf)
 int cbuffer_put(cbuffer_handle_t cbuf, void * in_data)
 {
     pthread_mutex_lock(&cbuf->lock);
-    if(cbuf->print) printf("Put-rutine got lock\n");
+    if(cbuf->print) printio("Put-rutine got lock");
 
     memcpy_offset_dest(cbuf->buffer,in_data, cbuf->element_size * cbuf->write_pos, cbuf->element_size);
-    if(cbuf->print) printf("Put data at pos %u\n",cbuf->write_pos );
+    if(cbuf->print) printio("Put data at pos %u",cbuf->write_pos );
 
     advance_pointer(cbuf);
 
     pthread_mutex_unlock(&cbuf->lock);
-    if(cbuf->print) printf("Put-routine released lock\n");
+    if(cbuf->print) printio("Put-routine released lock");
     return 0;
 }
 
@@ -156,17 +157,17 @@ int cbuffer_get(cbuffer_handle_t cbuf, void * out_data)
     if(!cbuffer_empty(cbuf))
     {
         pthread_mutex_lock(&cbuf->lock);
-        if(cbuf->print) printf("Get-rutine got lock\n");
+        if(cbuf->print) printio("Get-rutine got lock");
 
         memcpy_offset_source(out_data,cbuf->buffer, cbuf->element_size * cbuf->read_pos, cbuf->element_size);
 
         retreat_pointer(cbuf);
 
         pthread_mutex_unlock(&cbuf->lock);
-        if(cbuf->print) printf("Get-routine released lock\n");
+        if(cbuf->print) printio("Get-routine released lock");
         return 0;
     }
-    if(cbuf->print) printf("Attempted to read empty buffer\n");
+    if(cbuf->print) printio("Attempted to read empty buffer");
     return -1; // should this be !?
 }
 
@@ -177,17 +178,17 @@ int cbuffer_try_get(cbuffer_handle_t cbuf, void * out_data)
     if(!cbuffer_empty(cbuf))
     {
         if(pthread_mutex_trylock(&cbuf->lock)) return -1; // buffer busy dont lock
-        if(cbuf->print) printf("Get-rutine got lock\n");
+        if(cbuf->print) printio("Get-rutine got lock");
 
         memcpy_offset_source(out_data,cbuf->buffer, cbuf->element_size * cbuf->read_pos, cbuf->element_size);
 
         retreat_pointer(cbuf);
 
         pthread_mutex_unlock(&cbuf->lock);
-        if(cbuf->print) printf("Get-routine released lock\n");
+        if(cbuf->print) printio("Get-routine released lock");
         return 0;
     }
-    if(cbuf->print) printf("Attempted to read empty buffer\n");
+    if(cbuf->print) printio("Attempted to read empty buffer");
     return -1; // should this be !?
 }
 
@@ -199,7 +200,7 @@ int cbuffer_top(cbuffer_handle_t cbuf, void * out_data)
     if(!cbuffer_empty(cbuf))
     {
         pthread_mutex_lock(&cbuf->lock);
-        if(cbuf->print) printf("Top-rutine got lock\n");
+        if(cbuf->print) printio("Top-rutine got lock");
 
         size_t temp_read_pos;
         if (cbuf->write_pos == 0){
@@ -214,10 +215,10 @@ int cbuffer_top(cbuffer_handle_t cbuf, void * out_data)
 
         pthread_mutex_unlock(&cbuf->lock);
 
-        if(cbuf->print) printf("Top-routine released lock\n");
+        if(cbuf->print) printio("Top-routine released lock");
         return 0;
     }
-    if(cbuf->print) printf("Attempted to read empty buffer\n");
+    if(cbuf->print) printio("Attempted to read empty buffer");
     return -1; // should this be !?
 }
 

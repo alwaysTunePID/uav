@@ -4,6 +4,7 @@
 #include <semaphore.h>
 #include "imu.h"
 #include "baro.h"
+#include "battery_thread.h"
 #include "dsm_thread.h"
 #include "flight_thread.h"
 #include "circular_buffer.h"
@@ -23,8 +24,7 @@ Could be "to many uses of get_latest_dsm"?
 
 
 */
-#define DESCEND_THR 0.4
-#define G 9.82
+#define DESCEND_THR 0.58// With 0.6 it landed gracefully (but bonced on the floor)
 #define MIN_ERROR 0.3
 #define MAX_I 0.4
 #define FREQUENCY 200.0
@@ -104,13 +104,17 @@ static double K_pa_p = 2.0;
 static double K_pa_r = 2.0;
 //static double K_pa_y = 3.0;
 
-static double K_ia_p = 0.002*5.0;
-static double K_ia_r = 0.002*5.0;
+static double K_ia_p = 0.002*5.0; // Increase these
+static double K_ia_r = 0.002*5.0; // Increase these
 //static double K_ia_y = 0.002*4.0;
 
 static double I_a_p = 0.0;
 static double I_a_r = 0.0;
 //static double I_a_y = 0.0;
+
+
+static double P_a_p = 0.0;
+static double P_a_r = 0.0;
 
 
 // ----------------------------------------------------------------------------------------
@@ -154,7 +158,7 @@ static int init_controller_log_file(){
 	controller_log = fopen("controller.log", "w");
 
 	if (controller_log == NULL){
-		printf("Could not open a controller log file!\n");
+		printio("Could not open a controller log file!");
 		return -1;
 	}
 	//fprintf(controller_log," temp_c alt_m pressure_pa\n");
@@ -174,7 +178,7 @@ static int close_controller_log(){
 int log_controller(esc_input_t *esc_input){
 
 	if (controller_log == NULL){
-		printf("Tried to write before controller log file was created\n");
+		printio("Tried to write before controller log file was created");
 		return -1;
 	}
 
@@ -193,13 +197,17 @@ int log_controller(esc_input_t *esc_input){
 			r_rate,
 			I_a_p,
 			I_a_r,
-			v_p,
-			v_r);
+			P_a_p,
+			P_a_r);
 	// fprintf(controller_log, "%f %f\n", pitch, roll);
 	return 0;
 }
 
-void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_offset) {
+void LP_filter(double input, double* average, double factor){
+	*average = input*factor + (1-factor)* *average;  // ensure factor belongs to  [0,1]
+}
+
+void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_offset, double* mean_g) {
 	calibration_sleep();
 
 	sem_wait(IMU_sem);
@@ -209,6 +217,7 @@ void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_
 
 	*mean_pitch_offset = pitch;
 	*mean_roll_offset = roll;
+	*mean_g = imu_data.accel[2];
 
 	for(int mean_samples = 1; mean_samples < 100; mean_samples++) {
 		sem_wait(IMU_sem);
@@ -218,45 +227,38 @@ void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_
 
 		*mean_pitch_offset = (double)(mean_samples - 1) / ((double)mean_samples) * *mean_pitch_offset + pitch / ((double)mean_samples);
 		*mean_roll_offset = (double)(mean_samples - 1) / ((double)mean_samples) * *mean_roll_offset + roll / ((double)mean_samples);
+		*mean_g = (double)(mean_samples - 1) / ((double)mean_samples) * *mean_g + imu_data.accel[2]/ ((double)mean_samples);
 	}
 
-	printf("Pitch offset: ");
-	printf("%8.4f ", *mean_pitch_offset);
-	printf("\n");
+	printio("Pitch offset:\t\t\t%.4f", *mean_pitch_offset);
+	printio("Roll offset:\t\t\t%.4f", *mean_roll_offset);
+	printio("Gravitational constant:\t%.4f", *mean_g);
 
-	printf("Rolll offset: ");
-	printf("%8.4f ", *mean_roll_offset);
-	printf("\n");
-
-	FILE* calibration_file = fopen("pitch_roll_offest.cal", "w");
+	FILE* calibration_file = fopen("pitch_roll_offset.cal", "w");
 
 	if (calibration_file == NULL){
 		fprintf(stderr, "Could not open a calibration file!\n");
 	}
 
-	fprintf(calibration_file, "%lf %lf", *mean_pitch_offset, *mean_roll_offset);
+	fprintf(calibration_file, "%lf %lf %lf", *mean_pitch_offset, *mean_roll_offset, *mean_g);
 	
 	fclose(calibration_file);
 }
 
-void load_offset(double* mean_pitch_offset, double* mean_roll_offset) {
-	FILE* calibration_file = fopen("pitch_roll_offest.cal", "r");
+void load_offset(double* mean_pitch_offset, double* mean_roll_offset, double* mean_g) {
+	FILE* calibration_file = fopen("pitch_roll_offset.cal", "r");
 
 	if (calibration_file == NULL){
 		fprintf(stderr, "Could not open a calibration file! Use flag -c if you have not created one.\n");
 	}
 
-	fscanf(calibration_file, "%lf %lf", mean_pitch_offset, mean_roll_offset);
+	fscanf(calibration_file, "%lf %lf %lf", mean_pitch_offset, mean_roll_offset, mean_g);
 	
 	fclose(calibration_file);
 
-	printf("Pitch offset: ");
-	printf("%8.4f ", *mean_pitch_offset);
-	printf("\n");
-
-	printf("Rolll offset: ");
-	printf("%8.4f ", *mean_roll_offset);
-	printf("\n");
+	printio("Pitch offset:\t\t%.4f", *mean_pitch_offset);
+	printio("Roll offset:\t\t%.4f", *mean_roll_offset);
+	printio("Gravitational constant:\t%.4f", *mean_g);
 }
 
 // Used to update parameters live through the controller. UNUSED. NEEDS UPDATE
@@ -281,11 +283,11 @@ void load_offset(double* mean_pitch_offset, double* mean_roll_offset) {
 			T_d_p = T_d_p_0 + input_D * scale_d;
 			T_d_r = T_d_r_0 + input_D * scale_d;
 			//K_y = k_y_0 + input_Y * 0.001;
-			printf("New K_p is set %lf\n", K_p);
-			printf("New K_r is set %lf\n", K_r);
-			printf("New T_d_p is set %lf\n", T_d_p);
-			printf("New T_d_r is set %lf\n\n", T_d_r);
-			printf("New K_y is set %lf\n", K_y);
+			printio("New K_p is set %lf", K_p);
+			printio("New K_r is set %lf", K_r);
+			printio("New T_d_p is set %lf", T_d_p);
+			printio("New T_d_r is set %lf", T_d_r);
+			printio("New K_y is set %lf", K_y);
 		}
 		help = 0;
 	}
@@ -353,9 +355,10 @@ void rate_PID(esc_input_t *esc_input, double thr, controller_data_t* controller_
 
 }
 
-void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref, controller_data_t* controller_data){
-	double p_angle_error = *pitch_ref - pitch;
-	double r_angle_error = *roll_ref - roll;
+
+void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
+	double p_angle_error = clip(*pitch_ref - pitch, -70.0, 70.0);
+	double r_angle_error = clip(*roll_ref - roll, -70.0, 70.0);
 	I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
 	I_a_r = I_a_r + K_ia_r * TS * r_angle_error;
 	//I_a_y = I_a_y + K_ia_y * TS * y_angle_error;
@@ -367,9 +370,11 @@ void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref, controller_
 	I_a_p = clip(I_a_p, -MAX_I, MAX_I);
 	I_a_r = clip(I_a_r, -MAX_I, MAX_I);
 	//I_a_y = clip(I_a_y, -MAX_I, MAX_I);
+	P_a_p = K_pa_p * p_angle_error;
+	P_a_r = K_pa_r * r_angle_error;
 
-	pitch_rate_ref = K_pa_p * p_angle_error + I_a_p;
- 	roll_rate_ref = K_pa_r * r_angle_error + I_a_r;
+	pitch_rate_ref =  P_a_p + I_a_p;
+ 	roll_rate_ref =  P_a_r + I_a_r;
 	yaw_rate_ref = *yaw_ref;
 
 	// Update data in controller struct for plotting
@@ -392,30 +397,34 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 	init_controller_log_file();
 	
 	flight_mode_t flight_mode = FLIGHT;
-	int samples = 0;
-	double mean_z_speed = 0;
+	// int samples = 0;
+	// double mean_z_speed = 0;
+	// double mean_z_acc = 0;
 
 	double mean_roll_offset = 0;
 	double mean_pitch_offset = 0;
+	double mean_g = 0;
 	
 	double pitch_ref = 0;
 	double roll_ref = 0;
 	double yaw_ref = 0;
-	double z_speed = 0;
+	// double z_speed = 0;
 	double thr = 0; // normalized throttle
 
 	//Calibrate
-	if(calibrate) calibrate_IMU(IMU_sem, &mean_pitch_offset, &mean_roll_offset);
-	else load_offset(&mean_pitch_offset, &mean_roll_offset);
+	if(calibrate) calibrate_IMU(IMU_sem, &mean_pitch_offset, &mean_roll_offset, &mean_g);
+	else load_offset(&mean_pitch_offset, &mean_roll_offset, &mean_g);
 
 
 	while (rc_get_state() != EXITING){
 		
 		if (rc_dsm_ch_normalized(5) > 0.7){
 			armed = 1;
+			set_armed(1);//IO_THEAD
 			rc_led_set(RC_LED_RED, 1);
 		} else {
 			armed = 0;
+			set_armed(0);//IO_THREAD
 			rc_led_set(RC_LED_RED, 0);
 		}
 
@@ -425,9 +434,7 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 			// {
 			// 	get_latest_baro(&baro_data);
 			// 	alt_ref = baro_data.bmp_data.alt_m;
-			// 	printf("Baro ref alt: ");
-			// 	printf("%8.2f ", baro_data.bmp_data.alt_m);
-			// 	printf("\n");
+			// 	printio("Baro ref alt: %8.2f ", baro_data.bmp_data.alt_m);
 			// 	const_alt_active = 1;
 			// }
 		} else {
@@ -464,45 +471,55 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 
 		z_speed += TS*(imu_data.accel[2]-G);
 		//printf("\nz_speed: %lf\n", z_speed);
+		
+		// // Tried to estimate velocity but it performed lowsy. 
+		// LP_filter(imu_data.accel[2], &mean_z_acc, 0.1);
+		// z_speed += TS*(dead_zone(mean_z_acc-mean_g, 0.1));
+		// update_value(z_speed);
 
 		switch (flight_mode) {
 		case DESCEND:
-			if(!lost_dsm_connection()){
+			if(!lost_dsm_connection() && rc_dsm_ch_normalized(6) <= 0.7){
 				flight_mode = FLIGHT;
-				printf("\nEnter flight mode\n");
+				printio("Enter flight mode");
 			} else {
-				// Calculates a mean of z-acceleration
-				if  (samples == 0){
-					mean_z_speed = z_speed;
-					samples++;
-				} else if (samples == 30){
-					if (abs_fnc(mean_z_speed) < 0.4) {
-						flight_mode = LANDED;
-						printf("\nEnter landed mode\n");
-						armed = 0;
-						thr = 0;
-					}
-					printf("\nmean_z_speed: %lf\n",mean_z_speed);
-					samples=0;
-				} else {
-					mean_z_speed = (double)(samples - 1) / ((double)samples)
-					 	* mean_z_speed + z_speed / ((double)samples);
-					samples++; 
+				if (rc_dsm_nanos_since_last_packet() > 20000000000) {
+					flight_mode = LANDED;
+					printio("Enter landed mode");
+					armed = 0;
+					thr = 0;
 				}
+				// if  (samples == 0){
+				// 	mean_z_speed = z_speed;
+				// 	samples++;
+				// } else if (samples == 30){
+				// 	if (abs_fnc(mean_z_speed) < 0.4) {
+				// 		flight_mode = LANDED;
+				// 		printio("Enter landed mode");
+				// 		armed = 0;
+				// 		thr = 0;
+				// 	}
+				// 	printio("mean_z_speed: %lf",mean_z_speed);
+				// 	samples=0;
+				// } else {
+				// 	mean_z_speed = (double)(samples - 1) / ((double)samples)
+				// 	 	* mean_z_speed + z_speed / ((double)samples);
+				// 	samples++; 
+				// }
 			}
 			break;
 
 		case LANDED:
-			if(!lost_dsm_connection()){
+			if(!lost_dsm_connection() && rc_dsm_ch_normalized(6) <= 0.7){
 				flight_mode = FLIGHT;
-				printf("\nEnter flight mode\n");
+				printio("Enter flight mode");
 			} 
 			break;
 
 		case FLIGHT:
-			if(lost_dsm_connection()){
+			if(lost_dsm_connection() || rc_dsm_ch_normalized(6) > 0.7){
 				flight_mode = DESCEND;
-				printf("\nEnter descend mode\n");
+				printio("Enter descend mode");
 				// PRINT A MESSAGE HERE!!
 				thr = DESCEND_THR;
 				pitch_ref = 0;
@@ -510,6 +527,7 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 				yaw_ref = 0;
 			} else {
 				thr = rc_dsm_ch_normalized(1);
+				update_value(thr);
 				// bound the signal to the escs
 				if (thr < -0.1) thr = -0.1;
 				if (thr > 1.0) thr = 1.0;

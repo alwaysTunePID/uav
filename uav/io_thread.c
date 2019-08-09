@@ -4,6 +4,9 @@
 #include "queue.h"
 #include <robotcontrol.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
 
 
 #define GREEN "\033[1;32m"
@@ -12,6 +15,7 @@
 #define RESET_COLOR "\033[0m"
 
 #define SPACE_BUFFER "                                                  "
+#define BUFFER_LENGTH 110
 
 static int io_thread_ret_val;
 static uint64_t dsm_nanos = 0;
@@ -19,62 +23,12 @@ static uint64_t dsm_nanos = 0;
 static int warnings = 0;
 static int errors = 0;
 
-static int pval = 0.0;
-
 static Queue messages;
 static int queue_initialized = 0;
 
+static int armed = 0;
+
 int block_main = 0;
-
-int io_main(void) {
-    queue_init(&messages);
-
-	sleep(1);
-
-    prinf("\n");
-
-    while (rc_get_state() != EXITING) {
-        rc_usleep(500000);
-
-        if(block_main) continue;
-
-        char color[8];
-        char status[23];
-
-        //Set battery color
-        if(battery_data.voltage > 11.5 || battery_data.voltage < 0.1) strcpy(color, GREEN);//Will show 0.0 V when powered by USB.
-        else if (battery_data.voltage > 11) strcpy(color, YELLOW);
-        else strcpy(color, RED);
-        
-        //Check and set current status
-        if(errors > 0 || strcmp(color, RED) == 0) sprintf(status, "%s[ERROR]%s", RED, RESET_COLOR);
-        else if (warnings > 0 ||strcmp(color, YELLOW) == 0) sprintf(status, "%s[WARN]%s", YELLOW, RESET_COLOR);
-        else sprintf(status, "%s[OK]%s", GREEN, RESET_COLOR);
-
-        //Print
-        if(queue_empty(&messages)) {
-            if(dsm_nanos == 0) printf("\r  %s Battery voltage: %s%.2lf%s V%s Z-speed: %.3lf", status, color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER, pval);
-            else if (dsm_nanos >= 18446744073) printf("\r  %s Battery voltage: %s%.2lf%s V DSM has not been connected. Z-speed: %.3lf", status, color, battery_data.voltage, RESET_COLOR, pval);
-            else printf("\r  %s Battery voltage: %s%.2lf%s V Seconds since last DSM packet: %.2f Z-speed: %.3lf", status, color, battery_data.voltage, RESET_COLOR, dsm_nanos/1000000000.0, pval);
-        } else {
-            char message[255];
-            queue_pop(&messages, message);
-            printf("\r%s  \n", message);//TODO, calculate correct number of spaces depending on txet length
-
-            while(!queue_empty(&messages)) {
-                queue_pop(&messages, message);
-                printf("%s\n", message);
-            }
-
-            if(dsm_nanos == 0) printf("  %s Battery voltage: %s%.2lf%s V%s Z-speed: %.3lf", status, color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER, pval);
-            else if (dsm_nanos >= 18446744073) printf("  %s Battery voltage: %s%.2lf%s V DSM has not been connected. Z-speed: %.3lf", status, color, battery_data.voltage, RESET_COLOR, pval);
-            else printf("  %s Battery voltage: %s%.2lf%s V Seconds since last DSM packet: %.2f Z-speed: %.3lf", status, color, battery_data.voltage, RESET_COLOR, dsm_nanos/1000000000.0, pval);
-        }
-		fflush(stdout);
-    }
-
-    return 0;
-}
 
 void calibration_sleep() {
     block_main++;
@@ -102,13 +56,85 @@ void dsm_signal_restored() {
     dsm_nanos = 0;
 }
 
-void update_value(double value) {
-    pval = value;
+static double pval = 0;
+
+void update_value(double a) {
+    pval = a;
 }
 
-void printio(char message[]) {
+void printio(const char* fmt, ...) {
+    char message[255];
+    va_list args;
+    va_start(args, fmt);
+    vsprintf(message, fmt, args);
+
     while(!queue_initialized) sleep(1);
     queue_push(&messages, message);
+}
+
+void buffer(char* message) {
+    while(strlen(message) < BUFFER_LENGTH) strcat(message, " ");
+}
+
+void set_armed(int in_armed) {
+    armed = in_armed;
+}
+
+int io_main(void) {
+    queue_init(&messages, 100);
+    queue_initialized = 1;
+
+	sleep(1);
+
+    while (rc_get_state() != EXITING) {
+        rc_usleep(500000);
+
+        if(block_main) continue;
+
+        char color[8];
+        char status[46];
+        char armed_msg[23];
+
+        //Set battery color
+        if(battery_data.voltage > 11.5 || battery_data.voltage < 0.1) strcpy(color, GREEN);//Will show 0.0 V when powered by USB.
+        else if (battery_data.voltage > 11) strcpy(color, YELLOW);
+        else strcpy(color, RED);
+        
+        //Check and set current status
+        if(errors > 0 || strcmp(color, RED) == 0) sprintf(status, "%s[ERROR]%s", RED, RESET_COLOR);
+        else if (warnings > 0 ||strcmp(color, YELLOW) == 0) sprintf(status, "%s[WARN]%s", YELLOW, RESET_COLOR);
+        else sprintf(status, "%s[OK]%s", GREEN, RESET_COLOR);
+
+        if(armed) sprintf(armed_msg, "%s[ARMED]%s", RED, RESET_COLOR);
+        else sprintf(armed_msg, "%s[SAFE]%s", GREEN, RESET_COLOR);
+
+        strcat(status, armed_msg);
+
+        //Print
+        if(queue_empty(&messages)) {
+            if(dsm_nanos == 0) printf("\r  %s Battery voltage: %s%.2lf%s V THR: %lf%s", status, color, battery_data.voltage, RESET_COLOR, pval, SPACE_BUFFER);//TODO Remove SPACE_BUFFER and use buffer() instead
+            else if (dsm_nanos >= 18446744073) printf("\r  %s Battery voltage: %s%.2lf%s V DSM has not been connected.", status, color, battery_data.voltage, RESET_COLOR);
+            else printf("\r  %s Battery voltage: %s%.2lf%s V Seconds since last DSM packet: %.2f", status, color, battery_data.voltage, RESET_COLOR, dsm_nanos/1000000000.0);
+        } else {
+            char message[255];
+            queue_pop(&messages, message);
+            buffer(message);
+            printf("\r%s  \n", message);
+
+            while(!queue_empty(&messages)) {
+                queue_pop(&messages, message);
+                buffer(message);
+                printf("%s\n", message);
+            }
+
+            if(dsm_nanos == 0) printf("  %s Battery voltage: %s%.2lf%s V%s", status, color, battery_data.voltage, RESET_COLOR, SPACE_BUFFER);
+            else if (dsm_nanos >= 18446744073) printf("  %s Battery voltage: %s%.2lf%s V DSM has not been connected.", status, color, battery_data.voltage, RESET_COLOR);
+            else printf("  %s Battery voltage: %s%.2lf%s V Seconds since last DSM packet: %.2f", status, color, battery_data.voltage, RESET_COLOR, dsm_nanos/1000000000.0);
+        }
+		fflush(stdout);
+    }
+
+    return 0;
 }
 
 void *io_thread_func(void) {
