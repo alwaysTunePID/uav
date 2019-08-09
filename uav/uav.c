@@ -11,6 +11,7 @@
 #include "flight_thread.h"
 #include "io_thread.h"
 #include "battery_thread.h"
+#include "controller_data_thread.h"
 // threads  
 
 static pthread_t i2c_thread;
@@ -22,6 +23,7 @@ static pthread_t telemetry_thread;
 static pthread_t flight_thread;
 static pthread_t io_thread;
 static pthread_t battery_thread;
+static pthread_t controller_data_thread;
 //static pthread_t test_thread;
 
 int calibrate = 0;
@@ -168,6 +170,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "ERROR: Failed to start input/output thread \n");
 	}
 
+    if(rc_pthread_create(&controller_data_thread, controller_data_func, NULL, SCHED_OTHER, 0)){
+        fprintf(stderr, "ERROR: Failed to start input/output thread \n");
+    }
     // Sleep and let threads work
     while(rc_get_state()==RUNNING){
         rc_usleep(10000);

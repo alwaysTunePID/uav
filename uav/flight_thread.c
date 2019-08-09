@@ -10,7 +10,7 @@
 #include "circular_buffer.h"
 #include "io_thread.h"
 #include "uav.h"
-#include "controller_data.h"
+#include "controller_data_thread.h"
 
 /*
 This thread is intended to handle the flying of the drone. All control signals related to the flying will be calculated here. 
@@ -45,7 +45,7 @@ static int armed = 0;				 // Static mabye?
 static int const_alt_active = 0;	// Switch to 1 if you want to keep constant altitude. UNUSED
 
 
-static FILE* controller_log;
+//static FILE* controller_log;
 
 // Control signals
 static double v_p;
@@ -153,55 +153,55 @@ static int lost_dsm_connection(){
 //     return K;
 // }
 
-static int init_controller_log_file(){
+// static int init_controller_log_file(){
 
-	controller_log = fopen("controller.log", "w");
+// 	controller_log = fopen("controller.log", "w");
 
-	if (controller_log == NULL){
-		printio("Could not open a controller log file!");
-		return -1;
-	}
-	//fprintf(controller_log," temp_c alt_m pressure_pa\n");
-	return 0;
-}
+// 	if (controller_log == NULL){
+// 		printio("Could not open a controller log file!");
+// 		return -1;
+// 	}
+// 	fprintf(controller_log," temp_c alt_m pressure_pa\n");
+// 	return 0;
+// }
 
-static int close_controller_log(){
-	// add flag for enable and disable logging?
-	if (controller_log == NULL){
-		return -1;
-	}
-	fclose(controller_log);
-	return 0;
-}
+// static int close_controller_log(){
+// 	add flag for enable and disable logging?
+// 	if (controller_log == NULL){
+// 		return -1;
+// 	}
+// 	fclose(controller_log);
+// 	return 0;
+// }
 
 // log file for controller data. 
-int log_controller(esc_input_t *esc_input){
+// int log_controller(esc_input_t *esc_input){
 
-	if (controller_log == NULL){
-		printio("Tried to write before controller log file was created");
-		return -1;
-	}
+// 	if (controller_log == NULL){
+// 		printio("Tried to write before controller log file was created");
+// 		return -1;
+// 	}
 
-	fprintf(controller_log, "%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f\n",
-			esc_input->u_1,
-			v_1,
-			esc_input->u_2,
-			v_2,
-			esc_input->u_3,
-			v_3,
-			esc_input->u_4,
-			v_4,
-			pitch,
-			roll,
-			p_rate,
-			r_rate,
-			I_a_p,
-			I_a_r,
-			P_a_p,
-			P_a_r);
-	// fprintf(controller_log, "%f %f\n", pitch, roll);
-	return 0;
-}
+// 	fprintf(controller_log, "%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f\n",
+// 			esc_input->u_1,
+// 			v_1,
+// 			esc_input->u_2,
+// 			v_2,
+// 			esc_input->u_3,
+// 			v_3,
+// 			esc_input->u_4,
+// 			v_4,
+// 			pitch,
+// 			roll,
+// 			p_rate,
+// 			r_rate,
+// 			I_a_p,
+// 			I_a_r,
+// 			P_a_p,
+// 			P_a_r);
+// 	fprintf(controller_log, "%f %f\n", pitch, roll);
+// 	return 0;
+// }
 
 void LP_filter(double input, double* average, double factor){
 	*average = input*factor + (1-factor)* *average;  // ensure factor belongs to  [0,1]
@@ -351,12 +351,12 @@ void rate_PID(esc_input_t *esc_input, double thr, controller_data_t* controller_
 	esc_input->u_4 = (v_4 < -0.1) ? -0.1 : v_4;
 
 	// Log controller data
-	log_controller(esc_input);
+	//log_controller(esc_input);
 
 }
 
 
-void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
+void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref, controller_data_t* controller_data){
 	double p_angle_error = clip(*pitch_ref - pitch, -70.0, 70.0);
 	double r_angle_error = clip(*roll_ref - roll, -70.0, 70.0);
 	I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
@@ -394,7 +394,7 @@ void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
 // --------------------------------------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------------------------------------
 int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
-	init_controller_log_file();
+	//init_controller_log_file();
 	
 	flight_mode_t flight_mode = FLIGHT;
 	// int samples = 0;
@@ -469,7 +469,7 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 		controller_data->rates[1] = r_rate;
 		controller_data->rates[2] = y_rate;
 
-		z_speed += TS*(imu_data.accel[2]-G);
+		//z_speed += TS*(imu_data.accel[2]-G);
 		//printf("\nz_speed: %lf\n", z_speed);
 		
 		// // Tried to estimate velocity but it performed lowsy. 
@@ -557,7 +557,7 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 		rc_usleep(1000000 / FREQUENCY);
 	}
 
-	close_controller_log();
+	//close_controller_log();
 	return 0;
 }
 

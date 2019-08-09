@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-data = input("data:")
-file_name = f"controller_{data}.log"
+data_label = input("data:")
+file_name = f"controller_{data_label}.log"
 
 # Open file_name safely and store data as a matrix
 with open(file_name) as file:
@@ -29,14 +29,25 @@ print(loop_length)
 #         'pitch roll', 'Ppitch Proll',
 #         'I_a_p I_a_r', 'K-del rate loop'
 #         ]
-label = '(v1v2v3v4)(roll,pitch,yaw*(angle/rate/errors)(PID*(angle/rate/integral)'
+data_labels = {
+        'imu_data': ['roll angle', 'pitch angle', 'yaw angle',
+                        'roll rate', 'pitch rate', 'yaw rate'],
+        'motor': ['v1', 'v2', 'v3', 'v4'],
+        'errors': ['roll angle error', 'pitch angle error',
+                'roll rate error', 'pitch rate error', 'yaw rate error'],
+        'PID': ['k roll angle', 'k pitch angle',
+                'roll rate pid', 'pitch rate pid', 'yaw rate pid'],
+        'references': ['roll rate ref', 'pitch rate ref', 'yaw rate ref'],
+        }
+
 for i in range(loop_length):
     plt.figure()
     plt.plot(time, data[:,counter],'b')
+    plt.title(data_labels[data_label][counter], fontdict=font)
     counter +=1
 #     plt.plot(time, data[:,counter],'orange')
 #     counter+=1
-    plt.title(label, fontdict=font)
+    
 
 plt.show()
 
