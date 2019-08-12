@@ -3,20 +3,20 @@
 TARGET = uav
 
 # compiler and linker binaries
-CC		:= gcc
-LINKER		:= gcc
+CC		:= g++
+LINKER		:= g++
 
 # compiler and linker flags
 WFLAGS		:= -Wall -Wextra -Werror=float-equal -Wuninitialized -Wunused-variable -Wdouble-promotion
 CFLAGS		:= -g -c -Wall
 LDFLAGS		:= -pthread -lm -lrt -l:librobotcontrol.so.1
 
-SOURCES		:= $(wildcard *.c)
+SOURCES		:= $(wildcard *.cpp)
 INCLUDES	:= $(wildcard *.h)
 OBJDIR 		:= obj
 SRCDIR 		:= .
 #OBJECTS		:= $(SOURCES:$%.c=$%.o)
-OBJECTS		:= $(patsubst %,$(OBJDIR)/%, $(SOURCES:$%.c=$%.o))
+OBJECTS		:= $(patsubst %,$(OBJDIR)/%, $(SOURCES:$%.cpp=$%.o))
 
 prefix		:= /usr/local
 RM		:= rm -f
@@ -34,7 +34,7 @@ $(TARGET): $(OBJECTS)
 
 
 # compiling command
-$(OBJECTS): $(OBJDIR)/%.o : %.c $(INCLUDE) | $(OBJDIR)
+$(OBJECTS): $(OBJDIR)/%.o : %.cpp $(INCLUDE) | $(OBJDIR)
 	@$(CC) $(CFLAGS) $(WFLAGS) $(DEBUGFLAG) $< -o $@
 	@echo "Compiled: $@"
 

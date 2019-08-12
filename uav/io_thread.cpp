@@ -8,6 +8,10 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+extern "C" { 
+#include <robotcontrol.h>
+}
+
 
 #define GREEN "\033[1;32m"
 #define YELLOW "\033[01;33m"
@@ -33,7 +37,7 @@ int block_main = 0;
 void calibration_sleep() {
     block_main++;
     sleep(1);
-    char loading[30] = "#.............................";
+    char loading[31] = "#.............................";
     for(int i = 1; i < 30 && rc_get_state() != EXITING; i++) {
         loading[i] = '#';
         printf("\r  IMU waking up [%s] %d s / 30 s", loading, (i+1));

@@ -12,7 +12,7 @@ FILE* motors;
 
 
 
-static int init_file(char* data, FILE** file){
+static int init_file(const char* data, FILE** file){
     char filename[30];
     sprintf(filename,"controller_%s.log",data);
     *file = fopen(filename, "w");
@@ -29,7 +29,7 @@ static int close_file(FILE** file) {
     return 0;
 }
 
-void print_data(char* data, controller_data_t* controller_data, FILE** file) {
+void print_data(const char* data, controller_data_t* controller_data, FILE** file) {
     if(!strcmp(data, "motor")){
         fprintf(*file, "%lf %lf %lf %lf\n",
         controller_data->v_signals[0],

@@ -21,13 +21,13 @@ struct cbuffer_t {
 
 cbuffer_handle_t create_cbuffer()
 {
-    return (cbuffer_handle_t) malloc(sizeof(cbuffer_t));
+    return (cbuffer_handle_t) new cbuffer_t[1];
 }
 
 int cbuffer_init(cbuffer_handle_t cbuf,size_t _max_elements,size_t _element_size)
 {
     // Fill the data structure
-    cbuf->buffer= malloc(_max_elements*_element_size);
+    cbuf->buffer= ::operator new(_max_elements*_element_size);
     cbuffer_buf_reset(cbuf);
     cbuf->element_size=_element_size;
     cbuf->max_elements=_max_elements;
@@ -68,9 +68,9 @@ void cbuffer_disable_print_outs(cbuffer_handle_t cbuf)
 int cbuffer_free(cbuffer_handle_t cbuf)
 {
     if(cbuf->print) printio("Freeing buffer");
-    free(cbuf->buffer);
+    ::operator delete(cbuf->buffer);
     pthread_mutex_destroy(&cbuf->lock);
-    free(cbuf);
+    delete(cbuf);
     return 0;
 }
 
