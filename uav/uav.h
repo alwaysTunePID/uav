@@ -1,7 +1,6 @@
 #ifndef UAV_H
 #define UAV_H
 
-int calibrate;
-int manual_mode;
-
+extern int calibrate;
+extern int manual_mode;
 #endif

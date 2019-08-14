@@ -1,6 +1,6 @@
 #ifndef BATTERY_THREAD_H
 #define BATTERY_THREAD_H
-#endif
+
 typedef struct battery_info {
 	double cell_voltage;
 	double voltage;
@@ -8,6 +8,7 @@ typedef struct battery_info {
 	
 }battery_info;
 
-void* battery_thread_func();
+void* battery_thread_func(void*);
 
-battery_info battery_data;
+extern battery_info battery_data;
+#endif

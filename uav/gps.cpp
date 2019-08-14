@@ -1,5 +1,8 @@
 #include <stdio.h>
+extern "C"
+{ 
 #include <robotcontrol.h>
+}
 #include "sys_log.h"
 #include "gps.h"
 #include "ubx.h"
@@ -58,7 +61,7 @@ static void setup_uart()
     rc_uart_flush(uart_conf.bus);
 }
 
-static void disable_nmea_message(int bus, char *message)
+static void disable_nmea_message(int bus, const char *message)
 {
     char tx_buf[29];
 
@@ -182,7 +185,7 @@ void log_gps()
 static void push_latest()
 {
     positionType latestPosition;
-    getLatest(&latestPosition);
+    getLatestPosition(&latestPosition);
 
     gps_pvt_t element;
     element.latitude = latestPosition.latitude;
@@ -258,7 +261,7 @@ int gps_main(int bus)
 }
 
 
-void *gps_thread_func()
+void *gps_thread_func(void*)
 {
     gps_thread_ret_val = gps_main(2);
     if (gps_thread_ret_val == -1)

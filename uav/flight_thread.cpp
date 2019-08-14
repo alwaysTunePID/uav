@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <unistd.h>
-#include <robotcontrol.h> // includes ALL Robot Control subsystems
+extern "C"
+{ 
+#include <robotcontrol.h>
+} // includes ALL Robot Control subsystems
 #include <semaphore.h>
 #include "imu.h"
 #include "baro.h"
@@ -43,7 +46,6 @@ static esc_input_t esc_input;
 static int flight_thread_ret_val;						 
 static int armed = 0;				 // Static mabye?
 static int const_alt_active = 0;	// Switch to 1 if you want to keep constant altitude. UNUSED
-
 
 
 // Control signals
@@ -252,24 +254,24 @@ void manual_output(esc_input_t *esc_input, double thr){
 // --------------------------------- Cascaded controllers--------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------------------------------------
 
-void rate_PID(esc_input_t *esc_input, double thr, controller_data_t* controller_data){
+void rate_PID(esc_input_t *esc_input, double thr){
 	p_rate_error = pitch_rate_ref - p_rate;
 	r_rate_error = roll_rate_ref - r_rate;
 	y_rate_error = yaw_rate_ref - y_rate;
 
 
-	controller_data->rate_errors[0] = r_rate_error;
-	controller_data->rate_errors[1] = p_rate_error;
-	controller_data->rate_errors[2]= y_rate_error;
+	controller_data.rate_errors[0] = r_rate_error;
+	controller_data.rate_errors[1] = p_rate_error;
+	controller_data.rate_errors[2]= y_rate_error;
 
 
 	v_p = K_pr_p * p_rate_error;
 	v_r = K_pr_r * r_rate_error;
 	v_y = K_pr_y * y_rate_error;
 
-	controller_data->rate_pid[0] = v_r;
-	controller_data->rate_pid[1] = v_p;
-	controller_data->rate_pid[2] = v_y;
+	controller_data.rate_pid[0] = v_r;
+	controller_data.rate_pid[1] = v_p;
+	controller_data.rate_pid[2] = v_y;
 	
 	// Calulate new signal for each ESC
 	// Motor 4 is top right, then goes clockwise bottom right is 1.
@@ -294,7 +296,7 @@ void rate_PID(esc_input_t *esc_input, double thr, controller_data_t* controller_
 }
 
 
-void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref, controller_data_t* controller_data){
+void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
 	double p_angle_error = clip(*pitch_ref - pitch, -70.0, 70.0);
 	double r_angle_error = clip(*roll_ref - roll, -70.0, 70.0);
 	I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
@@ -316,22 +318,22 @@ void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref, controller_
 	yaw_rate_ref = *yaw_ref;
 
 	// Update data in controller struct for plotting
-	controller_data->angle_errors[0] = r_angle_error;
-	controller_data->angle_errors[1] = p_angle_error;
-	controller_data->k_angle_pid[1] = K_pa_r*r_angle_error;
-	controller_data->k_angle_pid[1] = K_pa_p*p_angle_error;
-	controller_data -> integral_pid[0] = I_a_r;
-	controller_data -> integral_pid[1] = I_a_p;
-	controller_data -> rate_refs[0] = roll_rate_ref;
-	controller_data -> rate_refs[1] = pitch_rate_ref;
-	controller_data -> rate_refs[2] = yaw_rate_ref;
+	controller_data.angle_errors[0] = r_angle_error;
+	controller_data.angle_errors[1] = p_angle_error;
+	controller_data.k_angle_pid[1] = K_pa_r*r_angle_error;
+	controller_data.k_angle_pid[1] = K_pa_p*p_angle_error;
+	controller_data.integral_pid[0] = I_a_r;
+	controller_data.integral_pid[1] = I_a_p;
+	controller_data.rate_refs[0] = roll_rate_ref;
+	controller_data.rate_refs[1] = pitch_rate_ref;
+	controller_data.rate_refs[2] = yaw_rate_ref;
 
 }
 
 // --------------------------------------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------------------------------------
-int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
+int flight_main(sem_t *IMU_sem){
 	flight_mode_t flight_mode = FLIGHT;
 	// int samples = 0;
 	// double mean_z_speed = 0;
@@ -440,13 +442,13 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 		r_rate = imu_data.gyro[1];
 		y_rate = imu_data.gyro[2];
 
-		controller_data->angles[0] = roll;
-		controller_data->angles[1] = pitch;
+		controller_data.angles[0] = roll;
+		controller_data.angles[1] = pitch;
 		//controller_data->angles[2] = yaw;
 
-		controller_data->rates[0] = p_rate;
-		controller_data->rates[1] = r_rate;
-		controller_data->rates[2] = y_rate;
+		controller_data.rates[0] = p_rate;
+		controller_data.rates[1] = r_rate;
+		controller_data.rates[2] = y_rate;
 
 		//z_speed += TS*(imu_data.accel[2]-G);
 		//printf("\nz_speed: %lf\n", z_speed);
@@ -533,8 +535,8 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 		} else {		
 			// update_PID_param();
 			// PID_controller(TS, &esc_input, thr);
-			angle_PID(&pitch_ref, &roll_ref, &yaw_ref, controller_data);
-			rate_PID(&esc_input,thr, controller_data);
+			angle_PID(&pitch_ref, &roll_ref, &yaw_ref);
+			rate_PID(&esc_input,thr);
 		}
 
 		if(armed) {
@@ -553,8 +555,8 @@ int flight_main(sem_t *IMU_sem, controller_data_t * controller_data){
 	return 0;
 }
 
-void *flight_thread_func(sem_t *IMU_sem){
-	flight_thread_ret_val = flight_main(IMU_sem, &controller_data);
+void *flight_thread_func(void* IMU_sem){
+	flight_thread_ret_val = flight_main((sem_t*)IMU_sem);
 	if (flight_thread_ret_val == -1){
 		rc_set_state(EXITING);
 	}

@@ -1,6 +1,9 @@
 #include "dsm_thread.h"
 #include <stdio.h>
+extern "C"
+{ 
 #include <robotcontrol.h>
+}
 #include "circular_buffer.h"
 #include "io_thread.h"
 
@@ -157,7 +160,7 @@ int dsm_main(){
     return 0;
 }
 
-void *dsm_thread_func(){
+void *dsm_thread_func(void*){
     dsm_thread_ret_val = dsm_main();
     if (dsm_thread_ret_val ==-1)
     {

@@ -1,1 +1,1 @@
-void* i2c_thread_func();
+void* i2c_thread_func(void*);

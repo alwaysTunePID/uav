@@ -1,4 +1,7 @@
+extern "C"
+{ 
 #include <robotcontrol.h>
+}
 
 typedef struct bmp_entry {
     uint64_t time_ns;

@@ -1,5 +1,8 @@
 #include "log_thread.h"
+extern "C"
+{ 
 #include <robotcontrol.h>
+}
 #include <semaphore.h>
 #include "imu.h"
 #include "baro.h"
@@ -12,7 +15,7 @@
 static int log_thread_ret_val;
 
 
-void* log_thread_func(void)
+void* log_thread_func(void*)
 {
 	rc_usleep(LOG_DELAY_US);
 	//int counter = 0;

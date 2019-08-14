@@ -15,8 +15,8 @@ typedef struct controller_data_t {
 
 } controller_data_t;
 
-controller_data_t controller_data;
+extern controller_data_t controller_data;
 
-void* controller_data_func();
+void* controller_data_func(void*);
 
 #endif

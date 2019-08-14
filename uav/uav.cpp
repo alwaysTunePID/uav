@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <unistd.h>
-#include <robotcontrol.h> // includes ALL Robot Control subsystems
+extern "C"
+{ 
+#include <robotcontrol.h>
+} // includes ALL Robot Control subsystems
 #include <semaphore.h>
 #include "gps.h"
 #include "i2c_thread.h"
@@ -64,6 +67,7 @@ void on_pause_press()
 int main(int argc, char *argv[])
 {
     int c;
+    sem_t IMU_sem;
 
     while((c = getopt(argc, argv, "cmh")) != -1) {
         switch(c) {
@@ -82,7 +86,7 @@ int main(int argc, char *argv[])
         }
     }
     
-    sem_t IMU_sem;
+    
     int ret;
     void* thread_retval; // return value of the thread
     // make sure another instance isn't running
@@ -121,7 +125,7 @@ int main(int argc, char *argv[])
     //start threads
 
 	
-     if(rc_pthread_create(&i2c_thread, i2c_thread_func, &IMU_sem, SCHED_OTHER, 0)){
+     if(rc_pthread_create(&i2c_thread, i2c_thread_func, (void*)&IMU_sem, SCHED_OTHER, 0)){
         fprintf(stderr, "ERROR: Failed to start I2C sampler thread\n");
         return -1;
     }
@@ -159,7 +163,7 @@ int main(int argc, char *argv[])
     }
 	*/
 	
-	if (rc_pthread_create(&flight_thread, flight_thread_func, &IMU_sem , SCHED_OTHER, 0)) {
+	if (rc_pthread_create(&flight_thread, flight_thread_func, (void*)&IMU_sem , SCHED_OTHER, 0)) {
 		fprintf(stderr, "ERROR: Failed to start Flight thread\n");
 		return -1;
 	}
@@ -185,7 +189,7 @@ int main(int argc, char *argv[])
         rc_usleep(10000);
     }
 	
-    // join i2c thread
+    //join i2c thread
     ret = rc_pthread_timed_join(i2c_thread, &thread_retval, 1.5);
     if ( ret == 1){
         fprintf(stderr,"ERROR: IMU thread timed out\n");
@@ -248,13 +252,20 @@ int main(int argc, char *argv[])
 	if (ret == 1) {
 	    fprintf(stderr, "ERROR: Input_thread timed out\n");
 	}
-	printf("Test thread returned:%d\n", *(int*)thread_retval);
+    printf("IO thread returned %d\n", *(int*)thread_retval);
+	
 
     ret = rc_pthread_timed_join(ros_thread, &thread_retval, 1.5);
     if(ret == 1) {
         fprintf(stderr, "ERROR: ROS thread timed out\n");
     }
     printf("ROS thread returned:%d\n", *(int*)thread_retval);
+
+    ret = rc_pthread_timed_join(controller_data_thread, &thread_retval, 1.5);
+    if ( ret == 1){
+        fprintf(stderr,"ERROR: controller_data_thread timed out\n");
+    }
+    printf("controller_data_thread returned:%d\n",*(int*)thread_retval);
 
 	
 
@@ -264,7 +275,7 @@ int main(int argc, char *argv[])
     rc_led_cleanup();
     rc_button_cleanup();	// stop button handlers
     rc_remove_pid_file();	// remove pid file LAST
-
+    sem_destroy(&IMU_sem);
 
 
     return 0;
