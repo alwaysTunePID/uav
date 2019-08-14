@@ -94,7 +94,7 @@ void getLatestPosition(positionType *pos)
     memcpy(pos, getLatest(), sizeof(positionType));
 }
 
-messageClassType processMessage()
+uint8_t processMessage()
 {
     messageClassType ret = UNKNOWN;
 
@@ -126,7 +126,7 @@ void printBuf(uint8_t *buf)
     printf("\n");
 }
 
-messageClassType process_buffer(uint8_t *buf, size_t *size)
+uint8_t process_buffer(uint8_t *buf, size_t *size)
 {
     while(strncmp((char*)buf, sync_char, 2) != 0 && *size > 0)
     {

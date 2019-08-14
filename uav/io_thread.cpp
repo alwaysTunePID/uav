@@ -2,7 +2,6 @@
 #include "imu.h"
 #include "battery_thread.h"
 #include "queue.h"
-#include <robotcontrol.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -11,6 +10,7 @@
 extern "C" { 
 #include <robotcontrol.h>
 }
+
 
 
 #define GREEN "\033[1;32m"
@@ -185,7 +185,7 @@ int io_main(void) {
     return 0;
 }
 
-void *io_thread_func(void) {
+void *io_thread_func(void*) {
     io_thread_ret_val = io_main();
     if (io_thread_ret_val ==-1) {
         rc_set_state(EXITING);

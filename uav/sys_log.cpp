@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdarg.h>
-#include <rc/pthread.h>
 #include "sys_log.h"
+extern "C" {
+    #include <robotcontrol.h>
+}
 
-static volatile LOG_LEVEL log_level=31;
+static volatile LOG_LEVEL log_level;
 static FILE *sys_log_fp;
 pthread_mutex_t lock;
 

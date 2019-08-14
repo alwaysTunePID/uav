@@ -1,5 +1,7 @@
+extern "C"
+{ 
 #include <robotcontrol.h>
-#include <semaphore.h>
+}
 #include "i2c_thread.h"
 #include "imu.h"
 #include "baro.h"
@@ -31,9 +33,9 @@ int i2c_main(sem_t *IMU_sem){
 }
 
 
-void* i2c_thread_func(sem_t *IMU_sem) // wrapper function for the i2c main which casts the retval to void*
+void* i2c_thread_func(void* IMU_sem) // wrapper function for the i2c main which casts the retval to void*
 {
-    i2c_thread_ret_val = i2c_main(IMU_sem);
+    i2c_thread_ret_val = i2c_main((sem_t*)IMU_sem);
     if (i2c_thread_ret_val)
     {
         rc_set_state(EXITING); // ism this needed? OBS

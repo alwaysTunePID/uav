@@ -1,4 +1,7 @@
+extern "C"
+{ 
 #include <robotcontrol.h>
+}
 #include <math.h>
 #include <endian.h>
 #include "airspeed.h"
@@ -275,7 +278,7 @@ int airspeed_main()
     return -1;
 }
 
-void *airspeed_thread_func()
+void *airspeed_thread_func(void*)
 {
     airspeed_thread_ret_val = airspeed_main();
     if (airspeed_thread_ret_val == -1)

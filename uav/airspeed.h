@@ -15,6 +15,6 @@ typedef struct airspeed_t
 
 int get_latest_airspeed(airspeed_t *latest);
 void log_airspeed(void);
-void *airspeed_thread_func();
+void *airspeed_thread_func(void*);
 
 #endif //AIRSPEED_H

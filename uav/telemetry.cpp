@@ -1,5 +1,8 @@
 #include <stdio.h>
+extern "C"
+{ 
 #include <robotcontrol.h>
+}
 #include "sys_log.h"
 #include "circular_buffer.h"
 #include "gps.h"
@@ -80,7 +83,7 @@ int telemetry_main(int uart_bus)
 }
 
 
-void *telemetry_thread_func()
+void *telemetry_thread_func(void*)
 {
     telemetry_thread_ret_val = telemetry_main(1);
     if (telemetry_thread_ret_val == -1)

@@ -13,7 +13,7 @@ void resolve_warning();
 void set_error(const char* fmt, ...);
 void resolve_error();
 void printio(const char* fmt, ...);
-void* io_thread_func();
+void* io_thread_func(void*);
 void update_value(double value);
 
 #endif

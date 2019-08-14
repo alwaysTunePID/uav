@@ -17,6 +17,6 @@ typedef enum flight_mode_t{
 }flight_mode_t;
 
 
-void* flight_thread_func();
+void* flight_thread_func(void*);
 
 #endif //FLIGHT_THREAD_H
