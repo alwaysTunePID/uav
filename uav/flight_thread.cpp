@@ -47,12 +47,6 @@ static int flight_thread_ret_val;
 static bool armed = false;
 static int const_alt_active = 0;	// Switch to 1 if you want to keep constant altitude. UNUSED
 
-
-// Control signals
-static double v_p;
-static double v_r;
-static double v_y;
-
 // Storage variables for angles
 static double pitch = 0.0;
 static double roll = 0.0;
@@ -61,21 +55,15 @@ static double yaw = 0.0;
 // altitude controller reference signal. UNUSED
 // double alt_ref = 0.0;
 
-// Normalized signals to ecs
-static double v_1;
-static double v_2;
-static double v_3;
-static double v_4;
-
 // Used for updating PID parameters. UNUSED
 // double input_K = 1.0;
 // double input_D = 1.0;
 // double input_Y = 1.0;
 // int help = 1;
 
-// +-----------+
-// | CONSTANTS |
-// +-----------+
+// ---------------------------------------------------------------------------------------
+// ------------------------------------ Constants ----------------------------------------
+// ---------------------------------------------------------------------------------------
 
 // rate pid
 static double K_pr_p = 0.0014; //0.001 
@@ -126,8 +114,8 @@ void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_
 
 	sem_wait(IMU_sem);
 	get_latest_imu(&imu_data);
-	pitch = imu_data.euler[0] * RAD_TO_DEG;
-	roll = imu_data.euler[1] * RAD_TO_DEG;
+	double pitch = imu_data.euler[0] * RAD_TO_DEG;
+	double roll = imu_data.euler[1] * RAD_TO_DEG;
 
 	*mean_pitch_offset = pitch;
 	*mean_roll_offset = roll;
@@ -235,9 +223,9 @@ void rate_PID(esc_input_t* esc_input, double thr, double p_rate, double r_rate, 
 	controller_data.rate_errors[1] = p_rate_error;
 	controller_data.rate_errors[2]= y_rate_error;
 
-	v_p = K_pr_p * p_rate_error;
-	v_r = K_pr_r * r_rate_error;
-	v_y = K_pr_y * y_rate_error;
+	double v_p = K_pr_p * p_rate_error;
+	double v_r = K_pr_r * r_rate_error;
+	double v_y = K_pr_y * y_rate_error;
 
 	controller_data.rate_pid[0] = v_r;
 	controller_data.rate_pid[1] = v_p;
@@ -245,10 +233,10 @@ void rate_PID(esc_input_t* esc_input, double thr, double p_rate, double r_rate, 
 	
 	// Calulate new signal for each ESC
 	// Motor 4 is top right, then goes clockwise bottom right is 1.
-	v_1 = thr + v_p + v_r + v_y;
-	v_2 = thr + v_p - v_r - v_y;
-	v_3 = thr - v_p - v_r + v_y;
-	v_4 = thr - v_p + v_r - v_y;
+	double v_1 = thr + v_p + v_r + v_y;
+	double v_2 = thr + v_p - v_r - v_y;
+	double v_3 = thr - v_p - v_r + v_y;
+	double v_4 = thr - v_p + v_r - v_y;
 	
 	// Make sure the control signals isnt out of range
 	esc_input->u_1 = (v_1 > 1.0) ? 1.0 : v_1;
@@ -264,7 +252,7 @@ void rate_PID(esc_input_t* esc_input, double thr, double p_rate, double r_rate, 
 	// Log controller data
 }
 
-void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref, esc_input_t* esc_input, double thr, double p_rate, double r_rate, double y_rate){
+void angle_PID(double pitch, double roll, double* pitch_ref, double* roll_ref, double* yaw_ref, esc_input_t* esc_input, double thr, double p_rate, double r_rate, double y_rate){
 	double p_angle_error = clip(*pitch_ref - pitch, -70.0, 70.0);
 	double r_angle_error = clip(*roll_ref - roll, -70.0, 70.0);
 	I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
@@ -405,9 +393,9 @@ int flight_main(sem_t *IMU_sem){
 		sem_wait(IMU_sem);
 		get_latest_imu(&imu_data);
 
-		pitch = imu_data.euler[0] * RAD_TO_DEG - mean_pitch_offset;
-		roll = imu_data.euler[1] * RAD_TO_DEG - mean_roll_offset;
-		yaw = imu_data.gyro[2];
+		double pitch = imu_data.euler[0] * RAD_TO_DEG - mean_pitch_offset;
+		double roll = imu_data.euler[1] * RAD_TO_DEG - mean_roll_offset;
+		double yaw = imu_data.gyro[2];//UNUSED
 
 		double p_rate = imu_data.gyro[0];
 		double r_rate = imu_data.gyro[1];
@@ -509,7 +497,7 @@ int flight_main(sem_t *IMU_sem){
 		} else {		
 			// update_PID_param();
 			// PID_controller(TS, &esc_input, thr);
-			angle_PID(&pitch_ref, &roll_ref, &yaw_ref, &esc_input, thr, p_rate, r_rate, y_rate);
+			angle_PID(pitch, roll, &pitch_ref, &roll_ref, &yaw_ref, &esc_input, thr, p_rate, r_rate, y_rate);
 		}
 
 		if(armed) {
