@@ -47,11 +47,6 @@ static int flight_thread_ret_val;
 static bool armed = false;
 static int const_alt_active = 0;	// Switch to 1 if you want to keep constant altitude. UNUSED
 
-// Storage variables for angles
-static double pitch = 0.0;
-static double roll = 0.0;
-static double yaw = 0.0;
-
 // altitude controller reference signal. UNUSED
 // double alt_ref = 0.0;
 
@@ -395,7 +390,6 @@ int flight_main(sem_t *IMU_sem){
 
 		double pitch = imu_data.euler[0] * RAD_TO_DEG - mean_pitch_offset;
 		double roll = imu_data.euler[1] * RAD_TO_DEG - mean_roll_offset;
-		double yaw = imu_data.gyro[2];//UNUSED
 
 		double p_rate = imu_data.gyro[0];
 		double r_rate = imu_data.gyro[1];
@@ -403,7 +397,6 @@ int flight_main(sem_t *IMU_sem){
 
 		controller_data.angles[0] = roll;
 		controller_data.angles[1] = pitch;
-		//controller_data->angles[2] = yaw;
 
 		controller_data.rates[0] = p_rate;
 		controller_data.rates[1] = r_rate;
