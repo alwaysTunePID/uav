@@ -302,7 +302,7 @@ void flight_setup() {
 	}
 }
 
-int flight_main(sem_t *IMU_sem){
+int flight_main(sem_t* sIMU_sem){
 	flight_mode_t flight_mode = FLIGHT;
 	// int samples = 0;
 	// double mean_z_speed = 0;
@@ -507,5 +507,5 @@ void* flight_thread_func(void* IMU_sem){
 	}
 	rc_led_set(RC_LED_RED, 0);
 	rc_led_set(RC_LED_GREEN, 0);
-	return (void *)&flight_thread_ret_val;
+	return (void*) &flight_thread_ret_val;
 }
