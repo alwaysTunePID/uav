@@ -16,6 +16,7 @@ extern "C"
 #include "controller_data_thread.h"
 
 /*
+
 This thread is intended to handle the flying of the drone. All control signals related to the flying will be calculated here. 
 The ESC control signals will be set from here. Input from the controller will be passed through here.
 
@@ -24,7 +25,6 @@ Attention!
 If dsm data is read from the log file, then the drone is impossible to control because of a 5 sec time delay.
 Reasons for this?
 Could be "too many uses of get_latest_dsm"? 
-
 
 */
 #define DESCEND_THR 0.58// With 0.6 it landed gracefully (but bonced on the floor)
@@ -59,10 +59,9 @@ static double roll = 0.0;
 static double yaw = 0.0;
 
 // altitude controller reference signal. UNUSED
-//double alt_ref = 0.0;
+// double alt_ref = 0.0;
 
 // Normalized signals to ecs
-
 static double v_1;
 static double v_2;
 static double v_3;
@@ -76,7 +75,6 @@ static double v_4;
 
 
 // Errors
-
 static double p_rate = 0.0;
 static double r_rate = 0.0;
 static double y_rate = 0.0;
@@ -85,11 +83,9 @@ static double pitch_rate_ref = 0.0;
 static double roll_rate_ref = 0.0;
 static double yaw_rate_ref = 0.0;
 
-
 static double p_rate_error = 0.0;
 static double r_rate_error = 0.0;
 static double y_rate_error = 0.0;
-
 
 // rate pid
 static double K_pr_p = 0.0014; //0.001 
@@ -108,10 +104,8 @@ static double I_a_p = 0.0;
 static double I_a_r = 0.0;
 //static double I_a_y = 0.0;
 
-
 static double P_a_p = 0.0;
 static double P_a_r = 0.0;
-
 
 // ----------------------------------------------------------------------------------------
 // ----------------------------------------------------------------------------------------
@@ -251,11 +245,9 @@ void rate_PID(esc_input_t *esc_input, double thr){
 	r_rate_error = roll_rate_ref - r_rate;
 	y_rate_error = yaw_rate_ref - y_rate;
 
-
 	controller_data.rate_errors[0] = r_rate_error;
 	controller_data.rate_errors[1] = p_rate_error;
 	controller_data.rate_errors[2]= y_rate_error;
-
 
 	v_p = K_pr_p * p_rate_error;
 	v_r = K_pr_r * r_rate_error;
@@ -272,7 +264,6 @@ void rate_PID(esc_input_t *esc_input, double thr){
 	v_3 = thr - v_p - v_r + v_y;
 	v_4 = thr - v_p + v_r - v_y;
 	
-
 	// Make sure the control signals isnt out of range
 	esc_input->u_1 = (v_1 > 1.0) ? 1.0 : v_1;
 	esc_input->u_2 = (v_2 > 1.0) ? 1.0 : v_2;
@@ -286,7 +277,6 @@ void rate_PID(esc_input_t *esc_input, double thr){
 
 	// Log controller data
 }
-
 
 void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
 	double p_angle_error = clip(*pitch_ref - pitch, -70.0, 70.0);
@@ -319,12 +309,12 @@ void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
 	controller_data.rate_refs[0] = roll_rate_ref;
 	controller_data.rate_refs[1] = pitch_rate_ref;
 	controller_data.rate_refs[2] = yaw_rate_ref;
-
 }
 
 // --------------------------------------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------------------------------------
+
 int flight_main(sem_t *IMU_sem){
 	flight_mode_t flight_mode = FLIGHT;
 	// int samples = 0;
@@ -547,7 +537,7 @@ int flight_main(sem_t *IMU_sem){
 	return 0;
 }
 
-void *flight_thread_func(void* IMU_sem){
+void* flight_thread_func(void* IMU_sem){
 	flight_thread_ret_val = flight_main((sem_t*)IMU_sem);
 	if (flight_thread_ret_val == -1){
 		rc_set_state(EXITING);
