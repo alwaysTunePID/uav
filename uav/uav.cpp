@@ -31,8 +31,8 @@ static pthread_t controller_data_thread;
 //static pthread_t test_thread;
 static pthread_t ros_thread;
 
-int calibrate = 0;
-int manual_mode = 0;
+bool calibrate = false;
+bool manual_mode = false;
 
 /**
  * Make the Pause button toggle between paused and running states.
@@ -72,10 +72,10 @@ int main(int argc, char *argv[])
     while((c = getopt(argc, argv, "cmh")) != -1) {
         switch(c) {
         case 'c':
-            calibrate = 1;
+            calibrate = true;
             break;
         case 'm':
-            manual_mode = 1;
+            manual_mode = true;
             break;
         case 'h':
             printf("\nUSAGE: uav [-c|-m|-h]\n");

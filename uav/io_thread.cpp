@@ -32,7 +32,7 @@ static int errors = 0;
 
 static queue<string> messages;
 
-static int armed = 0;
+static bool armed = false;
 
 int block_main = 0;
 
@@ -123,7 +123,7 @@ void buffer(char* message) {
     while(strlen(message) < BUFFER_LENGTH) strcat(message, " ");
 }
 
-void set_armed(int in_armed) {
+void set_armed(bool in_armed) {
     armed = in_armed;
 }
 

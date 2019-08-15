@@ -44,7 +44,7 @@ static esc_input_t esc_input;
 
 // misc variables
 static int flight_thread_ret_val;						 
-static int armed = 0;
+static bool armed = false;
 static int const_alt_active = 0;	// Switch to 1 if you want to keep constant altitude. UNUSED
 
 
@@ -370,15 +370,16 @@ int flight_main(sem_t *IMU_sem){
 				sent_arming_error = 1;
 			}
 
-			armed = 0;
+			armed = false;
+			set_armed(false);//IO_THEAD
 		} else if (rc_dsm_ch_normalized(5) > 0.7){
 			if(sent_arming_error) {
 				resolve_error();
 				sent_arming_error = 0;
 			}
 
-			armed = 1;
-			set_armed(1);//IO_THEAD
+			armed = true;
+			set_armed(true);//IO_THEAD
 			rc_led_set(RC_LED_RED, 1);
 		} else {
 			if(sent_arming_error) {
@@ -386,8 +387,8 @@ int flight_main(sem_t *IMU_sem){
 				sent_arming_error = 0;
 			}
 			
-			armed = 0;
-			set_armed(0);//IO_THREAD
+			armed = false;
+			set_armed(false);//IO_THREAD
 			rc_led_set(RC_LED_RED, 0);
 		}
 
@@ -449,7 +450,8 @@ int flight_main(sem_t *IMU_sem){
 				if (rc_dsm_nanos_since_last_packet() > 20000000000) {
 					flight_mode = LANDED;
 					printio("Enter landed mode");
-					armed = 0;
+					armed = false;
+					set_armed(false);//IO_THEAD
 					thr = 0;
 				}
 				// if  (samples == 0){
@@ -459,7 +461,8 @@ int flight_main(sem_t *IMU_sem){
 				// 	if (abs_fnc(mean_z_speed) < 0.4) {
 				// 		flight_mode = LANDED;
 				// 		printio("Enter landed mode");
-				// 		armed = 0;
+				// 		armed = false;
+				//		set_armed(false);//IO_THEAD
 				// 		thr = 0;
 				// 	}
 				// 	printio("mean_z_speed: %lf",mean_z_speed);
@@ -473,7 +476,8 @@ int flight_main(sem_t *IMU_sem){
 			break;
 
 		case LANDED:
-			armed = 0;
+			armed = false;
+			set_armed(false);//IO_THEAD
 			thr = 0;
 
 			if(!lost_dsm_connection() && rc_dsm_ch_normalized(6) <= 0.7){
