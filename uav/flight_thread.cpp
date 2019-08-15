@@ -73,19 +73,9 @@ static double v_4;
 // double input_Y = 1.0;
 // int help = 1;
 
-
-// Errors
-static double p_rate = 0.0;
-static double r_rate = 0.0;
-static double y_rate = 0.0;
-
-static double pitch_rate_ref = 0.0;
-static double roll_rate_ref = 0.0;
-static double yaw_rate_ref = 0.0;
-
-static double p_rate_error = 0.0;
-static double r_rate_error = 0.0;
-static double y_rate_error = 0.0;
+// +-----------+
+// | CONSTANTS |
+// +-----------+
 
 // rate pid
 static double K_pr_p = 0.0014; //0.001 
@@ -106,10 +96,6 @@ static double I_a_r = 0.0;
 
 static double P_a_p = 0.0;
 static double P_a_r = 0.0;
-
-// ----------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------
 
 // Function for saturating values
 static double clip(double n, double min, double max){
@@ -240,10 +226,10 @@ void manual_output(esc_input_t *esc_input, double thr){
 // --------------------------------- Cascaded controllers--------------------------------------------------------------------
 // --------------------------------------------------------------------------------------------------------------------------
 
-void rate_PID(esc_input_t *esc_input, double thr){
-	p_rate_error = pitch_rate_ref - p_rate;
-	r_rate_error = roll_rate_ref - r_rate;
-	y_rate_error = yaw_rate_ref - y_rate;
+void rate_PID(esc_input_t* esc_input, double thr, double p_rate, double r_rate, double y_rate, double pitch_rate_ref, double roll_rate_ref, double yaw_rate_ref){
+	double p_rate_error = pitch_rate_ref - p_rate;
+	double r_rate_error = roll_rate_ref - r_rate;
+	double y_rate_error = yaw_rate_ref - y_rate;
 
 	controller_data.rate_errors[0] = r_rate_error;
 	controller_data.rate_errors[1] = p_rate_error;
@@ -278,7 +264,7 @@ void rate_PID(esc_input_t *esc_input, double thr){
 	// Log controller data
 }
 
-void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
+void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref, esc_input_t* esc_input, double thr, double p_rate, double r_rate, double y_rate){
 	double p_angle_error = clip(*pitch_ref - pitch, -70.0, 70.0);
 	double r_angle_error = clip(*roll_ref - roll, -70.0, 70.0);
 	I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
@@ -295,9 +281,11 @@ void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
 	P_a_p = K_pa_p * p_angle_error;
 	P_a_r = K_pa_r * r_angle_error;
 
-	pitch_rate_ref =  P_a_p + I_a_p;
- 	roll_rate_ref =  P_a_r + I_a_r;
-	yaw_rate_ref = *yaw_ref;
+	double pitch_rate_ref =  P_a_p + I_a_p;
+ 	double roll_rate_ref =  P_a_r + I_a_r;
+	double yaw_rate_ref = *yaw_ref;
+
+	rate_PID(esc_input, thr, p_rate, r_rate, y_rate, pitch_rate_ref, roll_rate_ref, yaw_rate_ref);
 
 	// Update data in controller struct for plotting
 	controller_data.angle_errors[0] = r_angle_error;
@@ -421,9 +409,9 @@ int flight_main(sem_t *IMU_sem){
 		roll = imu_data.euler[1] * RAD_TO_DEG - mean_roll_offset;
 		yaw = imu_data.gyro[2];
 
-		p_rate = imu_data.gyro[0];
-		r_rate = imu_data.gyro[1];
-		y_rate = imu_data.gyro[2];
+		double p_rate = imu_data.gyro[0];
+		double r_rate = imu_data.gyro[1];
+		double y_rate = imu_data.gyro[2];
 
 		controller_data.angles[0] = roll;
 		controller_data.angles[1] = pitch;
@@ -521,8 +509,7 @@ int flight_main(sem_t *IMU_sem){
 		} else {		
 			// update_PID_param();
 			// PID_controller(TS, &esc_input, thr);
-			angle_PID(&pitch_ref, &roll_ref, &yaw_ref);
-			rate_PID(&esc_input,thr);
+			angle_PID(&pitch_ref, &roll_ref, &yaw_ref, &esc_input, thr, p_rate, r_rate, y_rate);
 		}
 
 		if(armed) {
