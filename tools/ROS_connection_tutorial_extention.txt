@@ -1,0 +1,13 @@
+Information from https://github.com/ros/meta-ros/issues/134
+
+Tweaking the network configuration and environment.
+
+On beagleboneA:
+ROS_ROOT=/usr
+ROS_MASTER_URI=http://beagleboneA:11311/
+CMAKE_PREFIX_PATH=/usr
+/etc/hosts: 192.168.1.53 beagleboneA.localdomain beagleboneA
+
+On the other machine:
+ROS_MASTER_URI=http://192.168.1.53:11311/
+etc/hosts: 192.168.1.53 beagleboneA

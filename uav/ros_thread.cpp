@@ -2,7 +2,7 @@
 extern "C"{ 
 #include <robotcontrol.h>
 }
-#include <ros/ros.h>
+// #include <ros/ros.h>
 
 static int ros_thread_ret_val;
 
