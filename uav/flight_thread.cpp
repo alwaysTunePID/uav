@@ -61,21 +61,19 @@ static int const_alt_active = 0;	// Switch to 1 if you want to keep constant alt
 // ---------------------------------------------------------------------------------------
 
 // rate pid
-static double K_pr_p = 0.0014; //0.001 
-static double K_pr_r = 0.0014; //0.001 could be higher
+static double K_pr_p = 0.0014; // Could be higher(?)
+static double K_pr_r = 0.0014; // Could be higher(?)
 static double K_pr_y = 0.0046;
+
 // angle pid
 static double K_pa_p = 4.0;
 static double K_pa_r = 4.0;
-//static double K_pa_y = 3.0;
 
-static double K_ia_p = 0.002*5000.0; // Increase these
-static double K_ia_r = 0.002*5000.0; // Increase these
-//static double K_ia_y = 0.002*4.0;
+static double K_ia_p = 0.002*5000.0
+static double K_ia_r = 0.002*5000.0;
 
 static double I_a_p = 0.0;
 static double I_a_r = 0.0;
-//static double I_a_y = 0.0;
 
 static double P_a_p = 0.0;
 static double P_a_r = 0.0;
