@@ -278,6 +278,30 @@ void angle_PID(double pitch, double roll, double* pitch_ref, double* roll_ref, d
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 
+void flight_setup() {
+	//Calibrate
+	u_int64_t time_since_wake = 0;
+
+	if(calibrate) calibrate_IMU(IMU_sem, &mean_pitch_offset, &mean_roll_offset, &mean_g);
+	else  {
+		load_offset(&mean_pitch_offset, &mean_roll_offset, &mean_g);
+		set_warning("IMU waking up. It is not recommended to fly within 30 seconds of startup.");
+		time_since_wake = rc_nanos_since_epoch();
+		sent_imu_wake_warning = 1;
+	}
+
+	sleep(1);
+
+	//Make sure that the drone is disarmed at start up.
+	if(rc_dsm_ch_normalized(5) > 0.7) {
+		set_error("Drone must be disarmed at startup.");
+
+		while(rc_get_state() != EXITING && rc_dsm_ch_normalized(5) > 0.7) rc_usleep(1000000);
+		
+		resolve_error();
+	}
+}
+
 int flight_main(sem_t *IMU_sem){
 	flight_mode_t flight_mode = FLIGHT;
 	// int samples = 0;
@@ -298,28 +322,7 @@ int flight_main(sem_t *IMU_sem){
 	int sent_dsm_prevent_descent_waring = 0;
 	int sent_imu_wake_warning = 0;
 
-	//Calibrate
-	u_int64_t time_since_wake = 0;
-
-	if(calibrate) calibrate_IMU(IMU_sem, &mean_pitch_offset, &mean_roll_offset, &mean_g);
-	else  {
-		load_offset(&mean_pitch_offset, &mean_roll_offset, &mean_g);
-		set_warning("IMU waking up. It is not recommended to fly within 30 seconds of startup.");
-		time_since_wake = rc_nanos_since_epoch();
-		sent_imu_wake_warning = 1;
-	}
-
-	sleep(1);
-
-	if(rc_dsm_ch_normalized(5) > 0.7) {
-		set_error("Drone must be disarmed at startup.");
-
-		while(rc_get_state() != EXITING && rc_dsm_ch_normalized(5) > 0.7) rc_usleep(1000000);
-		
-		resolve_error();
-	} else {
-		printio("Disarmed");
-	}
+	flight_setup();
 
 	while (rc_get_state() != EXITING){
 		if(sent_imu_wake_warning && time_since_wake + 30000000000 < rc_nanos_since_epoch()) {
