@@ -199,9 +199,9 @@ void manual_output(esc_input_t *esc_input, double thr){
 	esc_input->u_4 = thr;
 }
 
-// --------------------------------------------------------------------------------------------------------------------------
-// --------------------------------- Cascaded controllers--------------------------------------------------------------------
-// --------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// --------------------------------- Cascaded controllers-------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 void rate_PID(esc_input_t* esc_input, double thr, double p_rate, double r_rate, double y_rate, double pitch_rate_ref, double roll_rate_ref, double yaw_rate_ref){
 	double p_rate_error = pitch_rate_ref - p_rate;
@@ -246,15 +246,13 @@ void angle_PID(double pitch, double roll, double* pitch_ref, double* roll_ref, d
 	double r_angle_error = clip(*roll_ref - roll, -70.0, 70.0);
 	I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
 	I_a_r = I_a_r + K_ia_r * TS * r_angle_error;
-	//I_a_y = I_a_y + K_ia_y * TS * y_angle_error;
 	
 	I_a_p = (abs_fnc(p_angle_error) < MIN_ERROR) ? 0.0 : I_a_p;
 	I_a_r = (abs_fnc(r_angle_error) < MIN_ERROR) ? 0.0 : I_a_r;
-	//I_a_y = (abs_fnc(y_angle_error) < MIN_ERROR) ? 0.0 : I_a_y;
 
 	I_a_p = clip(I_a_p, -MAX_I, MAX_I);
 	I_a_r = clip(I_a_r, -MAX_I, MAX_I);
-	//I_a_y = clip(I_a_y, -MAX_I, MAX_I);
+	
 	P_a_p = K_pa_p * p_angle_error;
 	P_a_r = K_pa_r * r_angle_error;
 
@@ -276,9 +274,9 @@ void angle_PID(double pitch, double roll, double* pitch_ref, double* roll_ref, d
 	controller_data.rate_refs[2] = yaw_rate_ref;
 }
 
-// --------------------------------------------------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 int flight_main(sem_t *IMU_sem){
 	flight_mode_t flight_mode = FLIGHT;
@@ -479,13 +477,9 @@ int flight_main(sem_t *IMU_sem){
 			break;
 		}
 
-		if (manual_mode){
-			manual_output(&esc_input, thr);
-		} else {		
-			// update_PID_param();
-			// PID_controller(TS, &esc_input, thr);
-			angle_PID(pitch, roll, &pitch_ref, &roll_ref, &yaw_ref, &esc_input, thr, p_rate, r_rate, y_rate);
-		}
+		if (manual_mode) manual_output(&esc_input, thr);
+		else angle_PID(pitch, roll, &pitch_ref, &roll_ref, &yaw_ref, &esc_input, thr, p_rate, r_rate, y_rate);
+		//update_PID_param() should be called in else statement if used. 
 
 		if(armed) {
 			rc_servo_send_esc_pulse_normalized(1, esc_input.u_1);
