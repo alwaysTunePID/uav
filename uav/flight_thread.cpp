@@ -20,10 +20,10 @@ This thread is intended to handle the flying of the drone. All control signals r
 The ESC control signals will be set from here. Input from the controller will be passed through here.
 
 
-OBS. 
-IF dsm data is read from the log file, then the drone is impossible to control since of a 5 sec time delay.
+Attention! 
+If dsm data is read from the log file, then the drone is impossible to control because of a 5 sec time delay.
 Reasons for this?
-Could be "to many uses of get_latest_dsm"? 
+Could be "too many uses of get_latest_dsm"? 
 
 
 */
@@ -44,7 +44,7 @@ static esc_input_t esc_input;
 
 // misc variables
 static int flight_thread_ret_val;						 
-static int armed = 0;				 // Static mabye?
+static int armed = 0;
 static int const_alt_active = 0;	// Switch to 1 if you want to keep constant altitude. UNUSED
 
 
@@ -74,11 +74,6 @@ static double v_4;
 // double input_Y = 1.0;
 // int help = 1;
 
-
-
-// ----------------------------------------------------------------------------------------
-// ------------------------------------------ new pid design ------------------------------
-// ----------------------------------------------------------------------------------------
 
 // Errors
 
@@ -141,9 +136,6 @@ static double abs_fnc(double n){
 static int lost_dsm_connection(){
 	return rc_dsm_nanos_since_last_packet() > 1000000000;
 }
-
-
-
 
 void LP_filter(double input, double* average, double factor){
 	*average = input*factor + (1-factor)* *average;  // ensure factor belongs to  [0,1]
@@ -453,7 +445,7 @@ int flight_main(sem_t *IMU_sem){
 		//z_speed += TS*(imu_data.accel[2]-G);
 		//printf("\nz_speed: %lf\n", z_speed);
 		
-		// // Tried to estimate velocity but it performed lowsy. 
+		// Tried to estimate velocity but it performed lowsy. 
 		// LP_filter(imu_data.accel[2], &mean_z_acc, 0.1);
 		// z_speed += TS*(dead_zone(mean_z_acc-mean_g, 0.1));
 		// update_value(z_speed);
