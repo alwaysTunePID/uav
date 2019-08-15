@@ -287,7 +287,7 @@ void flight_setup() {
 		load_offset(&mean_pitch_offset, &mean_roll_offset, &mean_g);
 		set_warning("IMU waking up. It is not recommended to fly within 30 seconds of startup.");
 		time_since_wake = rc_nanos_since_epoch();
-		sent_imu_wake_warning = 1;
+		sent_imu_wake_warning = true;
 	}
 
 	sleep(1);
@@ -318,22 +318,22 @@ int flight_main(sem_t* sIMU_sem){
 	// double z_speed = 0;
 	double thr = 0; // normalized throttle
 
-	int sent_arming_error = 0;
-	int sent_dsm_prevent_descent_waring = 0;
-	int sent_imu_wake_warning = 0;
+	bool sent_arming_error = false;
+	bool sent_dsm_prevent_descent_waring = false;
+	bool sent_imu_wake_warning = false;
 
 	flight_setup();
 
 	while (rc_get_state() != EXITING){
 		if(sent_imu_wake_warning && time_since_wake + 30000000000 < rc_nanos_since_epoch()) {
 			resolve_warning();
-			sent_imu_wake_warning = 0;
+			sent_imu_wake_warning = false;
 		}
 		
 		if(!armed && rc_dsm_ch_normalized(1) > 0.0000000001 && rc_dsm_ch_normalized(5) > 0.7) {
 			if(!sent_arming_error) {
 				set_error("Could not arm, throttle was %.2lf", rc_dsm_ch_normalized(1));
-				sent_arming_error = 1;
+				sent_arming_error = true;
 			}
 
 			armed = false;
@@ -341,7 +341,7 @@ int flight_main(sem_t* sIMU_sem){
 		} else if (rc_dsm_ch_normalized(5) > 0.7){
 			if(sent_arming_error) {
 				resolve_error();
-				sent_arming_error = 0;
+				sent_arming_error = false;
 			}
 
 			armed = true;
@@ -350,7 +350,7 @@ int flight_main(sem_t* sIMU_sem){
 		} else {
 			if(sent_arming_error) {
 				resolve_error();
-				sent_arming_error = 0;
+				sent_arming_error = false;
 			}
 			
 			armed = false;
@@ -455,7 +455,7 @@ int flight_main(sem_t* sIMU_sem){
 				if(thr <= 0.0000000001) {
 					if(!sent_dsm_prevent_descent_waring) {
 						set_warning("Won't enable DEDCEND-mode beacuse thottle was 0.0");
-						sent_dsm_prevent_descent_waring = 1;
+						sent_dsm_prevent_descent_waring = true;
 					}
 				} else {
 					flight_mode = DESCEND;
@@ -468,7 +468,7 @@ int flight_main(sem_t* sIMU_sem){
 			} else {
 				if(sent_dsm_prevent_descent_waring) {
 					resolve_warning();
-					sent_dsm_prevent_descent_waring = 0;
+					sent_dsm_prevent_descent_waring = false;
 				}
 
 				thr = rc_dsm_ch_normalized(1);
