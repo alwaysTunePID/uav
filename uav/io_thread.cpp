@@ -12,8 +12,6 @@ extern "C" {
 #include <robotcontrol.h>
 }
 
-
-
 #define GREEN "\033[1;32m"
 #define YELLOW "\033[01;33m"
 #define RED "\033[0;31m"
@@ -70,7 +68,7 @@ void update_value(double a) {
 
 void set_warning(const char* fmt, ...) {
     char message[MESSAGE_MAX_LENGTH];
-    char output[MESSAGE_MAX_LENGTH];
+    char* output = new char[MESSAGE_MAX_LENGTH];
     va_list args;
     va_start(args, fmt);
     vsprintf(message, fmt, args);
@@ -89,7 +87,7 @@ void resolve_warning() {
 
 void set_error(const char* fmt, ...) {
     char message[MESSAGE_MAX_LENGTH];
-    char output[MESSAGE_MAX_LENGTH];
+    char* output = new char[MESSAGE_MAX_LENGTH];
     va_list args;
     va_start(args, fmt);
     vsprintf(message, fmt, args);
@@ -108,7 +106,7 @@ void resolve_error() {
 
 void printio(const char* fmt, ...) {
     char message[MESSAGE_MAX_LENGTH];
-    char output[MESSAGE_MAX_LENGTH];
+    char* output = new char[MESSAGE_MAX_LENGTH];
     va_list args;
     va_start(args, fmt);
     vsprintf(message, fmt, args);
@@ -129,6 +127,10 @@ void set_armed(bool in_armed) {
 
 int io_main(void) {
     sleep(1);
+
+    printio("MSG 1");
+    printio("MSG 2");
+    printio("MSG 3");
 
     while (rc_get_state() != EXITING) {
         rc_usleep(500000);
@@ -162,6 +164,7 @@ int io_main(void) {
         } else {
             char message[255];
             strcpy(message, messages.front());
+            delete[] messages.front();
             messages.pop();
 
             buffer(message);
@@ -169,6 +172,7 @@ int io_main(void) {
 
             while(!messages.empty()) {
                 strcpy(message, messages.front());
+                delete[] messages.front();
                 messages.pop();
                 buffer(message);
                 printf("%s\n", message);
