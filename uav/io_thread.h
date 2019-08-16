@@ -6,7 +6,7 @@
 void calibration_sleep();
 void dsm_signal_loss_warning(uint64_t time_ns);
 void dsm_signal_restored();
-void set_armed(int in_armed);
+void set_armed(bool in_armed);
 void update_value(double a);
 void set_warning(const char* fmt, ...);
 void resolve_warning();

@@ -22,7 +22,7 @@ extern "C" {
 #define SPACE_BUFFER "                                                  "
 #define BUFFER_LENGTH 110
 
-using namespace std;
+#define MESSAGE_MAX_LENGTH 225
 
 static int io_thread_ret_val;
 static uint64_t dsm_nanos = 0;
@@ -30,7 +30,7 @@ static uint64_t dsm_nanos = 0;
 static int warnings = 0;
 static int errors = 0;
 
-static queue<string> messages;
+static std::queue<char*> messages;
 
 static bool armed = false;
 
@@ -69,8 +69,8 @@ void update_value(double a) {
 }
 
 void set_warning(const char* fmt, ...) {
-    string message;
-    string output;
+    char message[MESSAGE_MAX_LENGTH];
+    char output[MESSAGE_MAX_LENGTH];
     va_list args;
     va_start(args, fmt);
     vsprintf(message, fmt, args);
@@ -88,8 +88,8 @@ void resolve_warning() {
 }
 
 void set_error(const char* fmt, ...) {
-    string message;
-    string output;
+    char message[MESSAGE_MAX_LENGTH];
+    char output[MESSAGE_MAX_LENGTH];
     va_list args;
     va_start(args, fmt);
     vsprintf(message, fmt, args);
@@ -107,8 +107,8 @@ void resolve_error() {
 }
 
 void printio(const char* fmt, ...) {
-    string message;
-    string output;
+    char message[MESSAGE_MAX_LENGTH];
+    char output[MESSAGE_MAX_LENGTH];
     va_list args;
     va_start(args, fmt);
     vsprintf(message, fmt, args);
@@ -160,15 +160,15 @@ int io_main(void) {
             else if (dsm_nanos >= 18446744073) printf("\r  %s Battery voltage: %s%.2lf%s V DSM has not been connected.", status, color, battery_data.voltage, RESET_COLOR);
             else printf("\r  %s Battery voltage: %s%.2lf%s V Seconds since last DSM packet: %.2f", status, color, battery_data.voltage, RESET_COLOR, dsm_nanos/1000000000.0);
         } else {
-            string message;
-            message = messages.front();
+            char message[255];
+            strcpy(message, messages.front());
             messages.pop();
 
             buffer(message);
             printf("\r%s  \n", message);
 
             while(!messages.empty()) {
-                message = messages.front();
+                strcpy(message, messages.front());
                 messages.pop();
                 buffer(message);
                 printf("%s\n", message);

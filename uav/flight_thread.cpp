@@ -65,7 +65,7 @@ static double K_pr_y = 0.0046;
 static double K_pa_p = 4.0;
 static double K_pa_r = 4.0;
 
-static double K_ia_p = 0.002*5000.0
+static double K_ia_p = 0.002*5000.0;
 static double K_ia_r = 0.002*5000.0;
 
 static double I_a_p = 0.0;
@@ -278,16 +278,14 @@ void angle_PID(double pitch, double roll, double* pitch_ref, double* roll_ref, d
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 
-void flight_setup() {
+void flight_setup(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_offset, double* mean_g, bool* sent_imu_wake_warning, u_int64_t* time_since_wake) {
 	//Calibrate
-	u_int64_t time_since_wake = 0;
-
-	if(calibrate) calibrate_IMU(IMU_sem, &mean_pitch_offset, &mean_roll_offset, &mean_g);
+	if(calibrate) calibrate_IMU(IMU_sem, mean_pitch_offset, mean_roll_offset, mean_g);
 	else  {
-		load_offset(&mean_pitch_offset, &mean_roll_offset, &mean_g);
+		load_offset(mean_pitch_offset, mean_roll_offset, mean_g);
 		set_warning("IMU waking up. It is not recommended to fly within 30 seconds of startup.");
-		time_since_wake = rc_nanos_since_epoch();
-		sent_imu_wake_warning = true;
+		*time_since_wake = rc_nanos_since_epoch();
+		*sent_imu_wake_warning = true;
 	}
 
 	sleep(1);
@@ -302,8 +300,11 @@ void flight_setup() {
 	}
 }
 
-int flight_main(sem_t* sIMU_sem){
+int flight_main(sem_t* IMU_sem){
 	flight_mode_t flight_mode = FLIGHT;
+	
+	u_int64_t time_since_wake = 0;
+
 	// int samples = 0;
 	// double mean_z_speed = 0;
 	// double mean_z_acc = 0;
@@ -322,7 +323,7 @@ int flight_main(sem_t* sIMU_sem){
 	bool sent_dsm_prevent_descent_waring = false;
 	bool sent_imu_wake_warning = false;
 
-	flight_setup();
+	flight_setup(IMU_sem, &mean_pitch_offset, &mean_roll_offset, &mean_g, &sent_imu_wake_warning, &time_since_wake);
 
 	while (rc_get_state() != EXITING){
 		if(sent_imu_wake_warning && time_since_wake + 30000000000 < rc_nanos_since_epoch()) {
