@@ -33,6 +33,10 @@ static pthread_t ros_thread;
 
 int calibrate = 0;
 int manual_mode = 0;
+typedef struct{
+    int* argc_ptr;
+    char** argv;
+}arg_holder_t;
 
 /**
  * Make the Pause button toggle between paused and running states.
@@ -68,6 +72,10 @@ int main(int argc, char *argv[])
 {
     int c;
     sem_t IMU_sem;
+    arg_holder_t* arg_struct;
+    arg_struct = new arg_holder_t[1];
+    arg_struct->argc_ptr = &argc;
+    arg_struct->argv = argv;
 
     while((c = getopt(argc, argv, "cmh")) != -1) {
         switch(c) {
@@ -180,7 +188,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "ERROR: Failed to start input/output thread \n");
     }
 
-    if(rc_pthread_create(&ros_thread, ros_thread_func, NULL, SCHED_OTHER, 0)) {
+    if(rc_pthread_create(&ros_thread, ros_thread_func, (void*)arg_struct, SCHED_OTHER, 0)) {
         fprintf(stderr, "ERROR: Failed to start ROS thread \n");
     }
 
@@ -276,6 +284,7 @@ int main(int argc, char *argv[])
     rc_button_cleanup();	// stop button handlers
     rc_remove_pid_file();	// remove pid file LAST
     sem_destroy(&IMU_sem);
+    delete[] arg_struct;
 
 
     return 0;
