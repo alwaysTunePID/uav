@@ -1,7 +1,8 @@
 #include "io_thread.h"
 #include "imu.h"
 #include "battery_thread.h"
-#include "queue.h"
+#include <queue>
+#include <string>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -11,8 +12,6 @@ extern "C" {
 #include <robotcontrol.h>
 }
 
-
-
 #define GREEN "\033[1;32m"
 #define YELLOW "\033[01;33m"
 #define RED "\033[0;31m"
@@ -21,16 +20,17 @@ extern "C" {
 #define SPACE_BUFFER "                                                  "
 #define BUFFER_LENGTH 110
 
+#define MESSAGE_MAX_LENGTH 225
+
 static int io_thread_ret_val;
 static uint64_t dsm_nanos = 0;
 
 static int warnings = 0;
 static int errors = 0;
 
-static Queue messages;
-static int queue_initialized = 0;
+static std::queue<char*> messages;
 
-static int armed = 0;
+static bool armed = false;
 
 int block_main = 0;
 
@@ -67,8 +67,8 @@ void update_value(double a) {
 }
 
 void set_warning(const char* fmt, ...) {
-    char message[255];
-    char output[255];
+    char message[MESSAGE_MAX_LENGTH];
+    char* output = new char[MESSAGE_MAX_LENGTH];
     va_list args;
     va_start(args, fmt);
     vsprintf(message, fmt, args);
@@ -76,8 +76,7 @@ void set_warning(const char* fmt, ...) {
 
     sprintf(output, "  %s[WARN]%s %s", YELLOW, RESET_COLOR, message);
 
-    while(!queue_initialized) sleep(1);
-    queue_push(&messages, output);
+    messages.push(output);
 
     warnings++;
 }
@@ -87,8 +86,8 @@ void resolve_warning() {
 }
 
 void set_error(const char* fmt, ...) {
-    char message[255];
-    char output[255];
+    char message[MESSAGE_MAX_LENGTH];
+    char* output = new char[MESSAGE_MAX_LENGTH];
     va_list args;
     va_start(args, fmt);
     vsprintf(message, fmt, args);
@@ -96,8 +95,7 @@ void set_error(const char* fmt, ...) {
 
     sprintf(output, "  %s[ERROR]%s %s", RED, RESET_COLOR, message);
 
-    while(!queue_initialized) sleep(1);
-    queue_push(&messages, output);
+    messages.push(output);
 
     errors++;
 }
@@ -107,8 +105,8 @@ void resolve_error() {
 }
 
 void printio(const char* fmt, ...) {
-    char message[255];
-    char output[255];
+    char message[MESSAGE_MAX_LENGTH];
+    char* output = new char[MESSAGE_MAX_LENGTH];
     va_list args;
     va_start(args, fmt);
     vsprintf(message, fmt, args);
@@ -116,23 +114,23 @@ void printio(const char* fmt, ...) {
 
     sprintf(output, "  [INFO] %s", message);
 
-    while(!queue_initialized) sleep(1);
-    queue_push(&messages, output);
+    messages.push(output);
 }
 
 void buffer(char* message) {
     while(strlen(message) < BUFFER_LENGTH) strcat(message, " ");
 }
 
-void set_armed(int in_armed) {
+void set_armed(bool in_armed) {
     armed = in_armed;
 }
 
 int io_main(void) {
-    queue_init(&messages, 100);
-    queue_initialized = 1;
+    sleep(1);
 
-	sleep(1);
+    printio("MSG 1");
+    printio("MSG 2");
+    printio("MSG 3");
 
     while (rc_get_state() != EXITING) {
         rc_usleep(500000);
@@ -159,18 +157,23 @@ int io_main(void) {
         strcat(status, armed_msg);
 
         //Print
-        if(queue_empty(&messages)) {
+        if(messages.empty()) {
             if(dsm_nanos == 0) printf("\r  %s Battery voltage: %s%.2lf%s V THR: %lf%s", status, color, battery_data.voltage, RESET_COLOR, pval, SPACE_BUFFER);//TODO Remove SPACE_BUFFER and use buffer() instead
             else if (dsm_nanos >= 18446744073) printf("\r  %s Battery voltage: %s%.2lf%s V DSM has not been connected.", status, color, battery_data.voltage, RESET_COLOR);
             else printf("\r  %s Battery voltage: %s%.2lf%s V Seconds since last DSM packet: %.2f", status, color, battery_data.voltage, RESET_COLOR, dsm_nanos/1000000000.0);
         } else {
             char message[255];
-            queue_pop(&messages, message);
+            strcpy(message, messages.front());
+            delete[] messages.front();
+            messages.pop();
+
             buffer(message);
             printf("\r%s  \n", message);
 
-            while(!queue_empty(&messages)) {
-                queue_pop(&messages, message);
+            while(!messages.empty()) {
+                strcpy(message, messages.front());
+                delete[] messages.front();
+                messages.pop();
                 buffer(message);
                 printf("%s\n", message);
             }
@@ -179,6 +182,7 @@ int io_main(void) {
             else if (dsm_nanos >= 18446744073) printf("  %s Battery voltage: %s%.2lf%s V DSM has not been connected.", status, color, battery_data.voltage, RESET_COLOR);
             else printf("  %s Battery voltage: %s%.2lf%s V Seconds since last DSM packet: %.2f", status, color, battery_data.voltage, RESET_COLOR, dsm_nanos/1000000000.0);
         }
+        
 		fflush(stdout);
     }
 

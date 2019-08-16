@@ -16,111 +16,56 @@ extern "C"
 #include "controller_data_thread.h"
 
 /*
+
 This thread is intended to handle the flying of the drone. All control signals related to the flying will be calculated here. 
 The ESC control signals will be set from here. Input from the controller will be passed through here.
 
 
-OBS. 
-IF dsm data is read from the log file, then the drone is impossible to control since of a 5 sec time delay.
+Attention! 
+If dsm data is read from the log file, then the drone is impossible to control because of a 5 sec time delay.
 Reasons for this?
-Could be "to many uses of get_latest_dsm"? 
-
+Could be "too many uses of get_latest_dsm"? 
 
 */
-#define DESCEND_THR 0.58// With 0.6 it landed gracefully (but bonced on the floor)
-#define MIN_ERROR 0.3
-#define MAX_I 50
-#define FREQUENCY 200.0
-#define TS 1/FREQUENCY
-#define MAX_ROLL_ANGLE 20.0
-#define MAX_PITCH_ANGLE 20.0
-#define MAX_YAW_RATE 90.0
+#define DESCEND_THR 0.58		// With 0.6 it landed gracefully (but bonced on the floor)
+#define MIN_ERROR 0.3			// Integral will be set to 0 if error < MIN_ERROR
+#define MAX_I 50				// Maximum integral output
+#define FREQUENCY 200.0			// Frequency of flight loop
+#define TS 1/FREQUENCY			// Time per iteration of flight loop
+#define MAX_ROLL_ANGLE 20.0		// Maximum roll angle (deg)
+#define MAX_PITCH_ANGLE 20.0	// Maximum pitch angle (deg)
+#define MAX_YAW_RATE 90.0		// Maximum yaw rate (deg / s)
+
+// rate pid
+#define K_pr_p 0.0014 // Constant for proportional part of rate pid for pitch (could be higher)
+#define K_pr_r 0.0014 // Constant for proportional part of rate pid for roll (could be higher)
+#define K_pr_y 0.0046 // Constant for proportional part of rate pid for yaw
+
+// angle pid
+#define K_pa_p 4.0 // Constant for proportional part of angle pid for pitch
+#define K_pa_r 4.0 // Constant for proportional part of angle pid for roll
+
+#define K_ia_p 0.002*5000.0 // Constant for integral part of angle pid for pitch
+#define K_ia_r 0.002*5000.0 // Constant for integral part of angle pid for roll
 
 // IMU Data
 static imu_entry_t imu_data;
 static esc_input_t esc_input;
 // static bmp_entry_t baro_data;
 
-
 // misc variables
 static int flight_thread_ret_val;						 
-static int armed = 0;				 // Static mabye?
+static bool armed = false;
 static int const_alt_active = 0;	// Switch to 1 if you want to keep constant altitude. UNUSED
 
-
-// Control signals
-static double v_p;
-static double v_r;
-static double v_y;
-
-// Storage variables for angles
-static double pitch = 0.0;
-static double roll = 0.0;
-static double yaw = 0.0;
-
 // altitude controller reference signal. UNUSED
-//double alt_ref = 0.0;
-
-// Normalized signals to ecs
-
-static double v_1;
-static double v_2;
-static double v_3;
-static double v_4;
+// double alt_ref = 0.0;
 
 // Used for updating PID parameters. UNUSED
 // double input_K = 1.0;
 // double input_D = 1.0;
 // double input_Y = 1.0;
 // int help = 1;
-
-
-
-// ----------------------------------------------------------------------------------------
-// ------------------------------------------ new pid design ------------------------------
-// ----------------------------------------------------------------------------------------
-
-// Errors
-
-static double p_rate = 0.0;
-static double r_rate = 0.0;
-static double y_rate = 0.0;
-
-static double pitch_rate_ref = 0.0;
-static double roll_rate_ref = 0.0;
-static double yaw_rate_ref = 0.0;
-
-
-static double p_rate_error = 0.0;
-static double r_rate_error = 0.0;
-static double y_rate_error = 0.0;
-
-
-// rate pid
-static double K_pr_p = 0.0014; //0.001 
-static double K_pr_r = 0.0014; //0.001 could be higher
-static double K_pr_y = 0.0046;
-// angle pid
-static double K_pa_p = 4.0;
-static double K_pa_r = 4.0;
-//static double K_pa_y = 3.0;
-
-static double K_ia_p = 0.002*5000.0; // Increase these
-static double K_ia_r = 0.002*5000.0; // Increase these
-//static double K_ia_y = 0.002*4.0;
-
-static double I_a_p = 0.0;
-static double I_a_r = 0.0;
-//static double I_a_y = 0.0;
-
-
-static double P_a_p = 0.0;
-static double P_a_r = 0.0;
-
-
-// ----------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------
 
 // Function for saturating values
 static double clip(double n, double min, double max){
@@ -142,9 +87,6 @@ static int lost_dsm_connection(){
 	return rc_dsm_nanos_since_last_packet() > 1000000000;
 }
 
-
-
-
 void LP_filter(double input, double* average, double factor){
 	*average = input*factor + (1-factor)* *average;  // ensure factor belongs to  [0,1]
 }
@@ -154,8 +96,8 @@ void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_
 
 	sem_wait(IMU_sem);
 	get_latest_imu(&imu_data);
-	pitch = imu_data.euler[0] * RAD_TO_DEG;
-	roll = imu_data.euler[1] * RAD_TO_DEG;
+	double pitch = imu_data.euler[0] * RAD_TO_DEG;
+	double roll = imu_data.euler[1] * RAD_TO_DEG;
 
 	*mean_pitch_offset = pitch;
 	*mean_roll_offset = roll;
@@ -174,7 +116,7 @@ void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_
 
 	printio("Pitch offset:\t\t\t%.4f", *mean_pitch_offset);
 	printio("Roll offset:\t\t\t%.4f", *mean_roll_offset);
-	printio("Gravitational constant:\t%.4f", *mean_g);
+	printio("Gravitational constant: %.4f", *mean_g);
 
 	FILE* calibration_file = fopen("pitch_roll_offset.cal", "w");
 
@@ -200,7 +142,7 @@ void load_offset(double* mean_pitch_offset, double* mean_roll_offset, double* me
 
 	printio("Pitch offset:\t\t%.4f", *mean_pitch_offset);
 	printio("Roll offset:\t\t%.4f", *mean_roll_offset);
-	printio("Gravitational constant:\t%.4f", *mean_g);
+	printio("Gravitational constant: %.4f", *mean_g);
 }
 
 // Used to update parameters live through the controller. UNUSED. NEEDS UPDATE
@@ -250,24 +192,22 @@ void manual_output(esc_input_t *esc_input, double thr){
 	esc_input->u_4 = thr;
 }
 
-// --------------------------------------------------------------------------------------------------------------------------
-// --------------------------------- Cascaded controllers--------------------------------------------------------------------
-// --------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// --------------------------------- Cascaded controllers-------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
-void rate_PID(esc_input_t *esc_input, double thr){
-	p_rate_error = pitch_rate_ref - p_rate;
-	r_rate_error = roll_rate_ref - r_rate;
-	y_rate_error = yaw_rate_ref - y_rate;
-
+void rate_PID(esc_input_t* esc_input, double thr, double p_rate, double r_rate, double y_rate, double pitch_rate_ref, double roll_rate_ref, double yaw_rate_ref){
+	double p_rate_error = pitch_rate_ref - p_rate;
+	double r_rate_error = roll_rate_ref - r_rate;
+	double y_rate_error = yaw_rate_ref - y_rate;
 
 	controller_data.rate_errors[0] = r_rate_error;
 	controller_data.rate_errors[1] = p_rate_error;
 	controller_data.rate_errors[2]= y_rate_error;
 
-
-	v_p = K_pr_p * p_rate_error;
-	v_r = K_pr_r * r_rate_error;
-	v_y = K_pr_y * y_rate_error;
+	double v_p = K_pr_p * p_rate_error;
+	double v_r = K_pr_r * r_rate_error;
+	double v_y = K_pr_y * y_rate_error;
 
 	controller_data.rate_pid[0] = v_r;
 	controller_data.rate_pid[1] = v_p;
@@ -275,12 +215,11 @@ void rate_PID(esc_input_t *esc_input, double thr){
 	
 	// Calulate new signal for each ESC
 	// Motor 4 is top right, then goes clockwise bottom right is 1.
-	v_1 = thr + v_p + v_r + v_y;
-	v_2 = thr + v_p - v_r - v_y;
-	v_3 = thr - v_p - v_r + v_y;
-	v_4 = thr - v_p + v_r - v_y;
+	double v_1 = thr + v_p + v_r + v_y;
+	double v_2 = thr + v_p - v_r - v_y;
+	double v_3 = thr - v_p - v_r + v_y;
+	double v_4 = thr - v_p + v_r - v_y;
 	
-
 	// Make sure the control signals isnt out of range
 	esc_input->u_1 = (v_1 > 1.0) ? 1.0 : v_1;
 	esc_input->u_2 = (v_2 > 1.0) ? 1.0 : v_2;
@@ -295,27 +234,26 @@ void rate_PID(esc_input_t *esc_input, double thr){
 	// Log controller data
 }
 
-
-void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
+void angle_PID(double pitch, double roll, double* pitch_ref, double* roll_ref, double* yaw_ref, esc_input_t* esc_input, double thr, double p_rate, double r_rate, double y_rate){
 	double p_angle_error = clip(*pitch_ref - pitch, -70.0, 70.0);
 	double r_angle_error = clip(*roll_ref - roll, -70.0, 70.0);
-	I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
-	I_a_r = I_a_r + K_ia_r * TS * r_angle_error;
-	//I_a_y = I_a_y + K_ia_y * TS * y_angle_error;
+	double I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
+	double I_a_r = I_a_r + K_ia_r * TS * r_angle_error;
 	
 	I_a_p = (abs_fnc(p_angle_error) < MIN_ERROR) ? 0.0 : I_a_p;
 	I_a_r = (abs_fnc(r_angle_error) < MIN_ERROR) ? 0.0 : I_a_r;
-	//I_a_y = (abs_fnc(y_angle_error) < MIN_ERROR) ? 0.0 : I_a_y;
 
 	I_a_p = clip(I_a_p, -MAX_I, MAX_I);
 	I_a_r = clip(I_a_r, -MAX_I, MAX_I);
-	//I_a_y = clip(I_a_y, -MAX_I, MAX_I);
-	P_a_p = K_pa_p * p_angle_error;
-	P_a_r = K_pa_r * r_angle_error;
+	
+	double P_a_p = K_pa_p * p_angle_error;
+	double P_a_r = K_pa_r * r_angle_error;
 
-	pitch_rate_ref =  P_a_p + I_a_p;
- 	roll_rate_ref =  P_a_r + I_a_r;
-	yaw_rate_ref = *yaw_ref;
+	double pitch_rate_ref =  P_a_p + I_a_p;
+ 	double roll_rate_ref =  P_a_r + I_a_r;
+	double yaw_rate_ref = *yaw_ref;
+
+	rate_PID(esc_input, thr, p_rate, r_rate, y_rate, pitch_rate_ref, roll_rate_ref, yaw_rate_ref);
 
 	// Update data in controller struct for plotting
 	controller_data.angle_errors[0] = r_angle_error;
@@ -327,14 +265,39 @@ void angle_PID(double* pitch_ref, double* roll_ref, double* yaw_ref){
 	controller_data.rate_refs[0] = roll_rate_ref;
 	controller_data.rate_refs[1] = pitch_rate_ref;
 	controller_data.rate_refs[2] = yaw_rate_ref;
-
 }
 
-// --------------------------------------------------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------------------------------------------
-// --------------------------------------------------------------------------------------------------------------------------
-int flight_main(sem_t *IMU_sem){
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+
+void flight_setup(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_offset, double* mean_g, bool* sent_imu_wake_warning, u_int64_t* time_since_wake) {
+	//Calibrate
+	if(calibrate) calibrate_IMU(IMU_sem, mean_pitch_offset, mean_roll_offset, mean_g);
+	else  {
+		load_offset(mean_pitch_offset, mean_roll_offset, mean_g);
+		set_warning("IMU waking up. It is not recommended to fly within 30 seconds of startup.");
+		*time_since_wake = rc_nanos_since_epoch();
+		*sent_imu_wake_warning = true;
+	}
+
+	sleep(1);
+
+	//Make sure that the drone is disarmed at start up.
+	if(rc_dsm_ch_normalized(5) > 0.7) {
+		set_error("Drone must be disarmed at startup.");
+
+		while(rc_get_state() != EXITING && rc_dsm_ch_normalized(5) > 0.7) rc_usleep(1000000);
+		
+		resolve_error();
+	}
+}
+
+int flight_main(sem_t* IMU_sem){
 	flight_mode_t flight_mode = FLIGHT;
+	
+	u_int64_t time_since_wake = 0;
+
 	// int samples = 0;
 	// double mean_z_speed = 0;
 	// double mean_z_acc = 0;
@@ -349,63 +312,43 @@ int flight_main(sem_t *IMU_sem){
 	// double z_speed = 0;
 	double thr = 0; // normalized throttle
 
-	int sent_arming_error = 0;
-	int sent_dsm_prevent_descent_waring = 0;
-	int sent_imu_wake_warning = 0;
+	bool sent_arming_error = false;
+	bool sent_dsm_prevent_descent_waring = false;
+	bool sent_imu_wake_warning = false;
 
-	//Calibrate
-	u_int64_t time_since_wake = 0;
-
-	if(calibrate) calibrate_IMU(IMU_sem, &mean_pitch_offset, &mean_roll_offset, &mean_g);
-	else  {
-		load_offset(&mean_pitch_offset, &mean_roll_offset, &mean_g);
-		set_warning("IMU waking up. It is not recommended to fly within 30 seconds of startup.");
-		time_since_wake = rc_nanos_since_epoch();
-		sent_imu_wake_warning = 1;
-	}
-
-	sleep(1);
-
-	if(rc_dsm_ch_normalized(5) > 0.7) {
-		set_error("Drone must be disarmed at startup.");
-
-		while(rc_get_state() != EXITING && rc_dsm_ch_normalized(5) > 0.7) rc_usleep(1000000);
-		
-		resolve_error();
-	} else {
-		printio("Disarmed");
-	}
+	flight_setup(IMU_sem, &mean_pitch_offset, &mean_roll_offset, &mean_g, &sent_imu_wake_warning, &time_since_wake);
 
 	while (rc_get_state() != EXITING){
 		if(sent_imu_wake_warning && time_since_wake + 30000000000 < rc_nanos_since_epoch()) {
 			resolve_warning();
-			sent_imu_wake_warning = 0;
+			sent_imu_wake_warning = false;
 		}
 		
 		if(!armed && rc_dsm_ch_normalized(1) > 0.0000000001 && rc_dsm_ch_normalized(5) > 0.7) {
 			if(!sent_arming_error) {
 				set_error("Could not arm, throttle was %.2lf", rc_dsm_ch_normalized(1));
-				sent_arming_error = 1;
+				sent_arming_error = true;
 			}
 
-			armed = 0;
+			armed = false;
+			set_armed(false);//IO_THEAD
 		} else if (rc_dsm_ch_normalized(5) > 0.7){
 			if(sent_arming_error) {
 				resolve_error();
-				sent_arming_error = 0;
+				sent_arming_error = false;
 			}
 
-			armed = 1;
-			set_armed(1);//IO_THEAD
+			armed = true;
+			set_armed(true);//IO_THEAD
 			rc_led_set(RC_LED_RED, 1);
 		} else {
 			if(sent_arming_error) {
 				resolve_error();
-				sent_arming_error = 0;
+				sent_arming_error = false;
 			}
 			
-			armed = 0;
-			set_armed(0);//IO_THREAD
+			armed = false;
+			set_armed(false);//IO_THREAD
 			rc_led_set(RC_LED_RED, 0);
 		}
 
@@ -434,17 +377,15 @@ int flight_main(sem_t *IMU_sem){
 		sem_wait(IMU_sem);
 		get_latest_imu(&imu_data);
 
-		pitch = imu_data.euler[0] * RAD_TO_DEG - mean_pitch_offset;
-		roll = imu_data.euler[1] * RAD_TO_DEG - mean_roll_offset;
-		yaw = imu_data.gyro[2];
+		double pitch = imu_data.euler[0] * RAD_TO_DEG - mean_pitch_offset;
+		double roll = imu_data.euler[1] * RAD_TO_DEG - mean_roll_offset;
 
-		p_rate = imu_data.gyro[0];
-		r_rate = imu_data.gyro[1];
-		y_rate = imu_data.gyro[2];
+		double p_rate = imu_data.gyro[0];
+		double r_rate = imu_data.gyro[1];
+		double y_rate = imu_data.gyro[2];
 
 		controller_data.angles[0] = roll;
 		controller_data.angles[1] = pitch;
-		//controller_data->angles[2] = yaw;
 
 		controller_data.rates[0] = p_rate;
 		controller_data.rates[1] = r_rate;
@@ -453,7 +394,7 @@ int flight_main(sem_t *IMU_sem){
 		//z_speed += TS*(imu_data.accel[2]-G);
 		//printf("\nz_speed: %lf\n", z_speed);
 		
-		// // Tried to estimate velocity but it performed lowsy. 
+		// Tried to estimate velocity but it performed lowsy. 
 		// LP_filter(imu_data.accel[2], &mean_z_acc, 0.1);
 		// z_speed += TS*(dead_zone(mean_z_acc-mean_g, 0.1));
 		// update_value(z_speed);
@@ -467,7 +408,8 @@ int flight_main(sem_t *IMU_sem){
 				if (rc_dsm_nanos_since_last_packet() > 20000000000) {
 					flight_mode = LANDED;
 					printio("Enter landed mode");
-					armed = 0;
+					armed = false;
+					set_armed(false);//IO_THEAD
 					thr = 0;
 				}
 				// if  (samples == 0){
@@ -477,7 +419,8 @@ int flight_main(sem_t *IMU_sem){
 				// 	if (abs_fnc(mean_z_speed) < 0.4) {
 				// 		flight_mode = LANDED;
 				// 		printio("Enter landed mode");
-				// 		armed = 0;
+				// 		armed = false;
+				//		set_armed(false);//IO_THEAD
 				// 		thr = 0;
 				// 	}
 				// 	printio("mean_z_speed: %lf",mean_z_speed);
@@ -491,7 +434,8 @@ int flight_main(sem_t *IMU_sem){
 			break;
 
 		case LANDED:
-			armed = 0;
+			armed = false;
+			set_armed(false);//IO_THEAD
 			thr = 0;
 
 			if(!lost_dsm_connection() && rc_dsm_ch_normalized(6) <= 0.7){
@@ -505,7 +449,7 @@ int flight_main(sem_t *IMU_sem){
 				if(thr <= 0.0000000001) {
 					if(!sent_dsm_prevent_descent_waring) {
 						set_warning("Won't enable DEDCEND-mode beacuse thottle was 0.0");
-						sent_dsm_prevent_descent_waring = 1;
+						sent_dsm_prevent_descent_waring = true;
 					}
 				} else {
 					flight_mode = DESCEND;
@@ -518,7 +462,7 @@ int flight_main(sem_t *IMU_sem){
 			} else {
 				if(sent_dsm_prevent_descent_waring) {
 					resolve_warning();
-					sent_dsm_prevent_descent_waring = 0;
+					sent_dsm_prevent_descent_waring = false;
 				}
 
 				thr = rc_dsm_ch_normalized(1);
@@ -530,14 +474,9 @@ int flight_main(sem_t *IMU_sem){
 			break;
 		}
 
-		if (manual_mode){
-			manual_output(&esc_input, thr);
-		} else {		
-			// update_PID_param();
-			// PID_controller(TS, &esc_input, thr);
-			angle_PID(&pitch_ref, &roll_ref, &yaw_ref);
-			rate_PID(&esc_input,thr);
-		}
+		if (manual_mode) manual_output(&esc_input, thr);
+		else angle_PID(pitch, roll, &pitch_ref, &roll_ref, &yaw_ref, &esc_input, thr, p_rate, r_rate, y_rate);
+		//update_PID_param() should be called in else statement if used. 
 
 		if(armed) {
 			rc_servo_send_esc_pulse_normalized(1, esc_input.u_1);
@@ -555,12 +494,12 @@ int flight_main(sem_t *IMU_sem){
 	return 0;
 }
 
-void *flight_thread_func(void* IMU_sem){
+void* flight_thread_func(void* IMU_sem){
 	flight_thread_ret_val = flight_main((sem_t*)IMU_sem);
 	if (flight_thread_ret_val == -1){
 		rc_set_state(EXITING);
 	}
 	rc_led_set(RC_LED_RED, 0);
 	rc_led_set(RC_LED_GREEN, 0);
-	return (void *)&flight_thread_ret_val;
+	return (void*) &flight_thread_ret_val;
 }

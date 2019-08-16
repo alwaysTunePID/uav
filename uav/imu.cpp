@@ -147,7 +147,8 @@ int get_latest_imu(imu_entry_t *imu)
 	{
 	if (cbuffer_top(imu_buffer, imu))
 	{
-		printio("ERROR: failed to peek IMU buffer");
+		set_error("Failed to peek IMU buffer");
+		resolve_error();
 		return -1;
 	}
 	}
