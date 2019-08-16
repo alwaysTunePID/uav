@@ -36,11 +36,22 @@ Could be "too many uses of get_latest_dsm"?
 #define MAX_PITCH_ANGLE 20.0	// Maximum pitch angle (deg)
 #define MAX_YAW_RATE 90.0		// Maximum yaw rate (deg / s)
 
+// rate pid
+#define K_pr_p 0.0014 // Constant for proportional part of rate pid for pitch (could be higher)
+#define K_pr_r 0.0014 // Constant for proportional part of rate pid for roll (could be higher)
+#define K_pr_y 0.0046 // Constant for proportional part of rate pid for yaw
+
+// angle pid
+#define K_pa_p 4.0 // Constant for proportional part of angle pid for pitch
+#define K_pa_r 4.0 // Constant for proportional part of angle pid for roll
+
+#define K_ia_p 0.002*5000.0 // Constant for integral part of angle pid for pitch
+#define K_ia_r 0.002*5000.0 // Constant for integral part of angle pid for roll
+
 // IMU Data
 static imu_entry_t imu_data;
 static esc_input_t esc_input;
 // static bmp_entry_t baro_data;
-
 
 // misc variables
 static int flight_thread_ret_val;						 
@@ -55,24 +66,6 @@ static int const_alt_active = 0;	// Switch to 1 if you want to keep constant alt
 // double input_D = 1.0;
 // double input_Y = 1.0;
 // int help = 1;
-
-// rate pid
-static double K_pr_p = 0.0014; // Could be higher(?)
-static double K_pr_r = 0.0014; // Could be higher(?)
-static double K_pr_y = 0.0046;
-
-// angle pid
-static double K_pa_p = 4.0;
-static double K_pa_r = 4.0;
-
-static double K_ia_p = 0.002*5000.0;
-static double K_ia_r = 0.002*5000.0;
-
-static double I_a_p = 0.0;
-static double I_a_r = 0.0;
-
-static double P_a_p = 0.0;
-static double P_a_r = 0.0;
 
 // Function for saturating values
 static double clip(double n, double min, double max){
@@ -244,8 +237,8 @@ void rate_PID(esc_input_t* esc_input, double thr, double p_rate, double r_rate, 
 void angle_PID(double pitch, double roll, double* pitch_ref, double* roll_ref, double* yaw_ref, esc_input_t* esc_input, double thr, double p_rate, double r_rate, double y_rate){
 	double p_angle_error = clip(*pitch_ref - pitch, -70.0, 70.0);
 	double r_angle_error = clip(*roll_ref - roll, -70.0, 70.0);
-	I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
-	I_a_r = I_a_r + K_ia_r * TS * r_angle_error;
+	double I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
+	double I_a_r = I_a_r + K_ia_r * TS * r_angle_error;
 	
 	I_a_p = (abs_fnc(p_angle_error) < MIN_ERROR) ? 0.0 : I_a_p;
 	I_a_r = (abs_fnc(r_angle_error) < MIN_ERROR) ? 0.0 : I_a_r;
@@ -253,8 +246,8 @@ void angle_PID(double pitch, double roll, double* pitch_ref, double* roll_ref, d
 	I_a_p = clip(I_a_p, -MAX_I, MAX_I);
 	I_a_r = clip(I_a_r, -MAX_I, MAX_I);
 	
-	P_a_p = K_pa_p * p_angle_error;
-	P_a_r = K_pa_r * r_angle_error;
+	double P_a_p = K_pa_p * p_angle_error;
+	double P_a_r = K_pa_r * r_angle_error;
 
 	double pitch_rate_ref =  P_a_p + I_a_p;
  	double roll_rate_ref =  P_a_r + I_a_r;
