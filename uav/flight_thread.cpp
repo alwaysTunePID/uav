@@ -27,14 +27,14 @@ Reasons for this?
 Could be "too many uses of get_latest_dsm"? 
 
 */
-#define DESCEND_THR 0.58// With 0.6 it landed gracefully (but bonced on the floor)
-#define MIN_ERROR 0.3
-#define MAX_I 50
-#define FREQUENCY 200.0
-#define TS 1/FREQUENCY
-#define MAX_ROLL_ANGLE 20.0
-#define MAX_PITCH_ANGLE 20.0
-#define MAX_YAW_RATE 90.0
+#define DESCEND_THR 0.58		// With 0.6 it landed gracefully (but bonced on the floor)
+#define MIN_ERROR 0.3			// Integral will be set to 0 if error < MIN_ERROR
+#define MAX_I 50				// Maximum integral output
+#define FREQUENCY 200.0			// Frequency of flight loop
+#define TS 1/FREQUENCY			// Time per iteration of flight loop
+#define MAX_ROLL_ANGLE 20.0		// Maximum roll angle (deg)
+#define MAX_PITCH_ANGLE 20.0	// Maximum pitch angle (deg)
+#define MAX_YAW_RATE 90.0		// Maximum yaw rate (deg / s)
 
 // IMU Data
 static imu_entry_t imu_data;
