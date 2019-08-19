@@ -7,13 +7,13 @@ extern "C"{
 #include <sstream>
 
 static int ros_thread_ret_val;
+static ros::NodeHandle nh_private("~");
 
-ros::NodeHandle* ros_setup(int* argc, char** argv) {
+void ros_setup(int* argc, char** argv) {
     ros::init(*argc, argv, "talker");
     std::string param;
-    ros::NodeHandle* nhPrivate_ptr = new ros::NodeHandle("~"); // private node handle
     std::string check;
-    nhPrivate_ptr->getParam("param", check);
+    nhPrivate.getParam("param", check);
     //std::cout << check << endl;
     if(check.compare("c") == 0){
         calibrate = true;
@@ -27,10 +27,9 @@ ros::NodeHandle* ros_setup(int* argc, char** argv) {
         printf("  -h  Prints this help message.\n");
         exit(0);
     }
-    return nhPrivate_ptr;
 }
 
-int ros_main(ros::NodeHandle* nhPrivate_ptr)
+int ros_main()
 {
 
     ros::Publisher chatter_pub = nhPrivate_ptr->advertise<std_msgs::String>("chatter", 1000);
@@ -62,8 +61,8 @@ int ros_main(ros::NodeHandle* nhPrivate_ptr)
 
 
 
-void* ros_thread_func(void* nhPrivate_ptr) {
-    ros_thread_ret_val = ros_main((ros::NodeHandle*)nhPrivate_ptr);
+void* ros_thread_func() {
+    ros_thread_ret_val = ros_main();
     if(ros_thread_ret_val == -1) {
         rc_set_state(EXITING);
     }
