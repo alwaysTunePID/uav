@@ -1,0 +1,6 @@
+# This has not been tested yet.
+<launch>
+
+<node pkg="uav_pkg" type="uav" name="uav" launch-prefix="sudo"/>
+
+</launch>

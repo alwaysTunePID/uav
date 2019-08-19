@@ -16,6 +16,7 @@ extern "C"
 #include "battery_thread.h"
 #include "controller_data_thread.h"
 #include "ros_thread.h"
+#include "uav.h"
 // threads  
 
 static pthread_t i2c_thread;
@@ -33,11 +34,6 @@ static pthread_t ros_thread;
 
 bool calibrate = false;
 bool manual_mode = false;
-
-typedef struct{
-    int* argc_ptr;
-    char** argv;
-}arg_holder_t;
 
 /**
  * Make the Pause button toggle between paused and running states.
