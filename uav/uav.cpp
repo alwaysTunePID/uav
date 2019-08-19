@@ -16,6 +16,7 @@ extern "C"
 #include "battery_thread.h"
 #include "controller_data_thread.h"
 #include "ros_thread.h"
+#include "ros/ros.h"
 #include "uav.h"
 // threads  
 
@@ -23,7 +24,7 @@ static pthread_t i2c_thread;
 static pthread_t dsm_thread;
 //static pthread_t gps_thread;
 static pthread_t log_thread;
-static pthread_t telemetry_thread;
+//static pthread_t telemetry_thread;
 //static pthread_t airspeed_thread;  
 static pthread_t flight_thread;
 static pthread_t io_thread;
@@ -69,10 +70,8 @@ int main(int argc, char *argv[])
 {
     int c;
     sem_t IMU_sem;
-    arg_holder_t* arg_struct;
-    arg_struct = new arg_holder_t[1];
-    arg_struct->argc_ptr = &argc;
-    arg_struct->argv = argv;
+    ros::NodeHandle* nhPrivate_ptr = ros_setup(&argc, argv);
+
 
     while((c = getopt(argc, argv, "cmh")) != -1) {
         switch(c) {
@@ -156,12 +155,13 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    /*
     if(rc_pthread_create(&telemetry_thread, telemetry_thread_func, NULL, SCHED_OTHER, 0)){
         fprintf(stderr, "ERROR: Failed to start LOG thread\n");
         return -1;
     }
     
-	/*
+	
     if(rc_pthread_create(&airspeed_thread, airspeed_thread_func, NULL, SCHED_OTHER, 0)){
         fprintf(stderr, "ERROR: Failed to start AIRSPEED thread\n");
         return -1;
@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "ERROR: Failed to start input/output thread \n");
     }
 
-    if(rc_pthread_create(&ros_thread, ros_thread_func, (void*)arg_struct, SCHED_OTHER, 0)) {
+    if(rc_pthread_create(&ros_thread, ros_thread_func, (void*)nhPrivate_ptr, SCHED_OTHER, 0)) {
         fprintf(stderr, "ERROR: Failed to start ROS thread \n");
     }
 
@@ -231,12 +231,14 @@ int main(int argc, char *argv[])
     printf("LOG thread returned:%d\n",*(int*)thread_retval);
 
     // join telemetry thread
+    /*
     ret = rc_pthread_timed_join(telemetry_thread, &thread_retval, 1.5);
     if ( ret == 1){
         fprintf(stderr,"ERROR: LOG thread timed out\n");
     }
     printf("TELEMETRY thread returned:%d\n",*(int*)thread_retval);
-	/*
+	*/
+    /*
     // join airspeed thread
     ret = rc_pthread_timed_join(airspeed_thread, &thread_retval, 1.5);
     if ( ret == 1){
@@ -281,7 +283,6 @@ int main(int argc, char *argv[])
     rc_button_cleanup();	// stop button handlers
     rc_remove_pid_file();	// remove pid file LAST
     sem_destroy(&IMU_sem);
-    delete[] arg_struct;
 
 
     return 0;

@@ -1,0 +1,9 @@
+
+# To run your program start a roscore in one terminal by writing:
+roscore
+# Open a second terminal and write:
+cd ~/catkin_ws
+source ./devel/setup.bash
+# This has to be done after catkin_make and before you execute your program.
+# Now you can run your program with:
+rosrun <pkg_name> <node_name>
