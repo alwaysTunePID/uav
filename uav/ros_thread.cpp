@@ -5,11 +5,23 @@ extern "C"{
 #include "uav.h"
 #include "std_msgs/String.h"
 #include <sstream>
+#include <queue>
+#include <vector>
+#include <semaphore.h>
+
+enum RosChannel {
+    chatter
+}
 
 static int ros_thread_ret_val;
 static ros::NodeHandle nh_private("~");
+static std::queue<std::pair<RosChannel, std::string>> pub_messages;
+
+sem_t ROS_sem;
 
 void ros_setup(int* argc, char** argv) {
+    sem_init(&ROS_sem);
+
     ros::init(*argc, argv, "talker");
     std::string check;
     nhPrivate.getParam("param", check);
@@ -28,28 +40,51 @@ void ros_setup(int* argc, char** argv) {
     }
 }
 
+void ros_publish(RosChannel ros_channel, string message) {
+    RosChannel* rc = new RosChannel;
+    std::string* msg = new std::string;
+
+    *rc = ros_channel;
+    *msg = message;
+
+    messages.push({*rc, *msg});
+}
+
+void ros_listen(RosChannel ros_channel) {
+
+}
+
 int ros_main() {
     ros::Publisher chatter_pub = nhPrivate_ptr->advertise<std_msgs::String>("chatter", 1000);
 
     ros::Rate loop_rate(10);
 
     int count = 0;
-    while (rc_get_state() != EXITING && ros::ok()){
+    while (rc_get_state() != EXITING && ros::ok()) {
+        //Publisher
+        while(!messages.empty()) {
+            std_msgs::String msg;
 
-        std_msgs::String msg;
+            std::stringstream ss;
+            ss << messages.front().second << count;
+            msg.data = ss.str();
 
-        std::stringstream ss;
-        ss << "hello world " << count;
-        msg.data = ss.str();
+            switch(mesages.front().first) {
+            case chatter:
+                chatter_pub.publish(msg);
+                break;
+            }
 
-        ROS_INFO("%s", msg.data.c_str());
-        chatter_pub.publish(msg);
+            ros::spinOnce();
+            
+            delete messages.front().first;
+            delete messages.front().second;
+            messages.pop()
+        }
 
-        ros::spinOnce();
-
+        //Listener
+        //Listen, add to corrent queue(one per channel?), post to semaphore
         loop_rate.sleep();
-
-        ++count;
     }
     
     delete nhPrivate_ptr;
