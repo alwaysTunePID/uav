@@ -11,10 +11,9 @@ static ros::NodeHandle nh_private("~");
 
 void ros_setup(int* argc, char** argv) {
     ros::init(*argc, argv, "talker");
-    std::string param;
     std::string check;
     nhPrivate.getParam("param", check);
-    //std::cout << check << endl;
+    
     if(check.compare("c") == 0){
         calibrate = true;
     } else if (check.compare("m") == 0){
@@ -29,9 +28,7 @@ void ros_setup(int* argc, char** argv) {
     }
 }
 
-int ros_main()
-{
-
+int ros_main() {
     ros::Publisher chatter_pub = nhPrivate_ptr->advertise<std_msgs::String>("chatter", 1000);
 
     ros::Rate loop_rate(10);
