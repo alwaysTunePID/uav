@@ -9,20 +9,46 @@ extern "C"{
 #include <vector>
 #include <semaphore.h>
 
-enum RosChannel {
-    chatter
-}
+#define MAX_MESSAGE_LENGTH 255
+
+enum RosPublishChannel {
+    chatter,
+    errors,
+    position
+};
+
+enum RosListenChannel {
+    misc,
+    pos
+};
 
 static int ros_thread_ret_val;
-static ros::NodeHandle nh_private("~");
-static std::queue<std::pair<RosChannel, std::string>> pub_messages;
 
-sem_t ROS_sem;
+/*
+        +--------------+
+        | ROS-Varibles |
+        +--------------+
+*/
+
+static ros::NodeHandle nh_private("~");
+
+//Publishers
+static ros::Publisher chatter_pub = nhPrivate.advertise<std_msgs::String>("chatter", 1000);
+static ros::Publisher errors_pub = nhPrivate.advertise<std_msgs::String>("errors", 1000);
+static ros::Publisher position_pub = nhPrivate.advertise<std_msgs::String>("position", 1000);//TODO implement custom type
+
+//Subscribers
+static ros::Subscriber misc_sub = nh_private.subscribe("misc", 1000, listen_misc);
+static ros::Subscriber pos_sub = nh_private.subscribe("pos", 1000, listen_pos);
+
+//Queues for listen-function
+static std::queue<int> chatter_q;
+
+//Varibles for listen-latest-function
+static std:string pos_v;
 
 void ros_setup(int* argc, char** argv) {
-    sem_init(&ROS_sem);
-
-    ros::init(*argc, argv, "talker");
+    ros::init(*argc, argv, "droneA");//TODO pass node name as commandline argument
     std::string check;
     nhPrivate.getParam("param", check);
     
@@ -40,21 +66,53 @@ void ros_setup(int* argc, char** argv) {
     }
 }
 
-void ros_publish(RosChannel ros_channel, string message) {
-    RosChannel* rc = new RosChannel;
-    std::string* msg = new std::string;
+void ros_publish(RosPublishChannel ros_channel, string fmt, ...) 
+    char message[MESSAGE_MAX_LENGTH];
+    char* output = new char[MESSAGE_MAX_LENGTH];
+    va_list args;
+    va_start(args, fmt);
+    vsprintf(message, fmt, args);
+    va_end(args);
 
-    *rc = ros_channel;
-    *msg = message;
+    switch(ros_channel) {
+    case chatter:
+    case errors:
+        std_msgs::String msg;
+        std::stringstream ss;
+        ss << message;
+        msg.data = ss.str();
+        break;
+    case position:
+        break;
+    }
 
-    messages.push({*rc, *msg});
+    switch(ros_channel) {
+    case chatter:
+        chatter_pub.publish(msg);
+        break;
+    }
+
+    ros::spinOnce();
 }
 
-void ros_listen(RosChannel ros_channel) {
+void ros_listen(RosPublishChannel ros_channel) {
 
 }
 
-int ros_main() {
+void ros_listen_latest() {
+
+}
+
+void listen_misc(const std_msgs::String::ConstPtr& msg) {
+    misc_q.push(msg->data.c_str());
+}
+
+void listen_pos(const std_msgs::String::ConstPtr& msg) {
+    pos_v = msg->data.c_str();
+}
+
+int ros_main() {//DEPRECATED
+    return 0;
     ros::Publisher chatter_pub = nhPrivate_ptr->advertise<std_msgs::String>("chatter", 1000);
 
     ros::Rate loop_rate(10);
