@@ -128,10 +128,6 @@ void set_armed(bool in_armed) {
 int io_main(void) {
     sleep(1);
 
-    printio("MSG 1");
-    printio("MSG 2");
-    printio("MSG 3");
-
     while (rc_get_state() != EXITING) {
         rc_usleep(500000);
 
