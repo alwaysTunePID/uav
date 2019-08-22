@@ -4,6 +4,7 @@ extern "C"{
 }
 #include "uav.h"
 #include "std_msgs/String.h"
+#include "ros/ros.h"
 #include <sstream>
 #include <queue>
 #include <vector>
@@ -47,14 +48,14 @@ static std::queue<int> chatter_q;
 static std::string pos_v;
 
 ros::NodeHandle* ros_setup(int* argc, char** argv) {
-    ros::init(*argc, argv, "droneA");//TODO pass node name as commandline argument
-    ros::NodeHandle* nh_private_ptr = new ros::NodeHandle;
+    ros::init(*argc, argv, "droneA"); //TODO pass node name as commandline argument
+    ros::NodeHandle* nh_private_ptr = new ros::NodeHandle("~");
     std::string check;
+    std::string param;
     nh_private_ptr->getParam("param", check);
     
     if(check.compare("c") == 0){
         calibrate = true;
-        std::cout << "c was detected" << std::endl;
     } else if (check.compare("m") == 0){
         manual_mode = true;
     } else if (check.compare("h") == 0){

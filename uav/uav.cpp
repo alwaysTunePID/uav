@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
     int c;
     sem_t IMU_sem;
     ros::NodeHandle* nh_private_ptr = ros_setup(&argc, argv);
-
+  
     while((c = getopt(argc, argv, "cmh")) != -1) {
         switch(c) {
         case 'c':
