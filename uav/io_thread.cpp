@@ -184,3 +184,12 @@ int io_main(void) {
 
     return 0;
 }
+
+void* io_thread_func(void*) {
+    io_thread_ret_val = io_main();
+    if(io_thread_ret_val == -1) {
+        rc_set_state(EXITING);
+    }
+
+    return (void*)&io_thread_ret_val;
+}
