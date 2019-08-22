@@ -1,0 +1,5 @@
+Remember to set the date before 'make' on the robots:
+$ sudo date -s 'Aug 21 11:10:00'
+
+
+
