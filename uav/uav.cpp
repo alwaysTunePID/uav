@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 {
     int c;
     sem_t IMU_sem;
-    ros::NodeHandle* nhPrivate_ptr = ros_setup(&argc, argv);
+    ros_setup(&argc, argv);
 
 
     while((c = getopt(argc, argv, "cmh")) != -1) {
@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "ERROR: Failed to start input/output thread \n");
     }
 
-    if(rc_pthread_create(&ros_thread, ros_thread_func, (void*)nhPrivate_ptr, SCHED_OTHER, 0)) {
+    if(rc_pthread_create(&ros_thread, ros_thread_func, NULL, SCHED_OTHER, 0)) {
         fprintf(stderr, "ERROR: Failed to start ROS thread \n");
     }
 

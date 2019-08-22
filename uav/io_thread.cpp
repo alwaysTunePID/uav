@@ -128,10 +128,6 @@ void set_armed(bool in_armed) {
 int io_main(void) {
     sleep(1);
 
-    printio("MSG 1");
-    printio("MSG 2");
-    printio("MSG 3");
-
     while (rc_get_state() != EXITING) {
         rc_usleep(500000);
 
@@ -187,13 +183,4 @@ int io_main(void) {
     }
 
     return 0;
-}
-
-void *io_thread_func(void*) {
-    io_thread_ret_val = io_main();
-    if (io_thread_ret_val ==-1) {
-        rc_set_state(EXITING);
-    }
-	
-    return (void*)&io_thread_ret_val;
 }
