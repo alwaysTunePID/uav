@@ -32,21 +32,21 @@ Could be "too many uses of get_latest_dsm"?
 #define MAX_I 50				// Maximum integral output
 #define FREQUENCY 200.0			// Frequency of flight loop
 #define TS 1/FREQUENCY			// Time per iteration of flight loop
-#define MAX_ROLL_ANGLE 20.0		// Maximum roll angle (deg)
-#define MAX_PITCH_ANGLE 20.0	// Maximum pitch angle (deg)
+#define MAX_ROLL_ANGLE 30.0		// Maximum roll angle (deg)
+#define MAX_PITCH_ANGLE 30.0	// Maximum pitch angle (deg)
 #define MAX_YAW_RATE 90.0		// Maximum yaw rate (deg / s)
 
-// rate pid
+// rate p
 #define K_pr_p 0.0014 // Constant for proportional part of rate pid for pitch (could be higher)
 #define K_pr_r 0.0014 // Constant for proportional part of rate pid for roll (could be higher)
 #define K_pr_y 0.0046 // Constant for proportional part of rate pid for yaw
 
 // angle pid
-#define K_pa_p 4.0 // Constant for proportional part of angle pid for pitch
-#define K_pa_r 4.0 // Constant for proportional part of angle pid for roll
+#define K_pa_p 6.0 // Constant for proportional part of angle pid for pitch
+#define K_pa_r 6.0 // Constant for proportional part of angle pid for roll
 
-#define K_ia_p 0.002*5000.0 // Constant for integral part of angle pid for pitch
-#define K_ia_r 0.002*5000.0 // Constant for integral part of angle pid for roll
+#define K_ia_p TS*4000.0 // Constant for integral part of angle pid for pitch
+#define K_ia_r TS*4000.0 // Constant for integral part of angle pid for roll
 
 // IMU Data
 static imu_entry_t imu_data;
@@ -237,8 +237,18 @@ void rate_PID(esc_input_t* esc_input, double thr, double p_rate, double r_rate, 
 void angle_PID(double pitch, double roll, double* pitch_ref, double* roll_ref, double* yaw_ref, esc_input_t* esc_input, double thr, double p_rate, double r_rate, double y_rate){
 	double p_angle_error = clip(*pitch_ref - pitch, -70.0, 70.0);
 	double r_angle_error = clip(*roll_ref - roll, -70.0, 70.0);
-	double I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
-	double I_a_r = I_a_r + K_ia_r * TS * r_angle_error;
+	
+	static double I_a_p;
+	static double I_a_r;
+
+	// So that I_a doesn't build up when not armed or not gas given.
+	if (armed && thr > 0.001){
+		I_a_p = I_a_p + K_ia_p * TS * p_angle_error;
+		I_a_r = I_a_r + K_ia_r * TS * r_angle_error;
+	} else {
+		I_a_p = 0.0;
+		I_a_r = 0.0;
+	}
 	
 	I_a_p = (abs_fnc(p_angle_error) < MIN_ERROR) ? 0.0 : I_a_p;
 	I_a_r = (abs_fnc(r_angle_error) < MIN_ERROR) ? 0.0 : I_a_r;
