@@ -1,0 +1,129 @@
+		
+			Manual from Summer Internship SAAB 2019 
+
+---------- Password and usernames -------------------------------------
+
+--- Unit ---------------------- Username -------------- Password -------
+router				BALROG_ROUTER		bandvagn
+router config			admin			admin
+hidden wifi in balrog 		Bandvagn		Balrog123
+balrog pi image 1		pi 			cdio2019
+balrog pi image 2		ubuntu 			cdio2019
+beaglebone wifi 		BeagleBoard-XXXX	BeagleBone
+Beaglebone blue			debian			temppwd
+-------------------------------------------------------------------------
+
+
+
+----------------------------------------------------------------------------
+------------ Beaglebone Blue Quadcopter ------------------------------------
+----------------------------------------------------------------------------
+
+---- How to get started ------------------------
+Connect a battery or USB cable to power the Beagleboard on
+
+Connect a computer to the BeagleBoard either by WIFI or USB 
+	WIFI: Connect to the network BeagleBoard-XXXX with password: BeagleBoard
+
+To open a remote terminal, write the following:
+	$ ssh debian@192.168.7.2 and use password: temppwd
+
+You might want to set the time to a correct value, this is done by typing:
+	$ sudo date –s  ‘Aug 28 10:51:35’
+
+The computer has trouble finding the Beagleboard while trying to connect to a computer via USB-cable. 
+Solution: Remove the wires to the ESCs. (The ones with numbers on them)
+
+#################################################################################################################################
+# It is VERY IMPORTANT to remember to charge the batteries before they completely run out of power.  			 	#	
+# Otherwise they will be almost impossible to charge again. There is no exact threshold voltage but we think it is around 9-10V.#
+#################################################################################################################################
+
+
+-------Test Flight---------------------------------
+
+############################################################### 
+# OBS: ONLY use the 1800mAh, 45C, 11.1V batteries when flying #
+###############################################################
+
+Attach propellers (motors top right and bottom left spins counterclockwise and top left and bottom right spins clockwise)
+Connect the ESC contacts to the corresponding pin.
+
+Power on the radio controller.
+
+If the there is a solid light on the dsm receiver (the thing at the back of the quadcopter, 
+that’s keeps flashing a light if not connected), then it is all good. 
+
+Then typ:
+$ roscore & 
+$ cd catkin_ws
+$ ./run_uav.sh  	(If you want to disable the controller then change c to m in the run_uav.sh file )
+
+Arm the quadcopter by moving the SA-switch up. Otherwise the motors wont move.
+
+SB-switch up, sets the quadcopter in DECENT-mode which should take the vehicle back to earth 
+(on a good day that is, since it’s a very simple feature that only sets the throttle to a constant value) 
+
+Fly away.
+
+---------- Compile your files -----------------------
+If you made changes or done something such that you need to compile the files again, move to the catkin_ws directory 
+and run “catkin_make”.
+
+---------- Something about the controller -----------
+The control loop that handles stabilizing the drone while in the air consists of two cascaded controllers. 
+The outer loop is an angle PI-controller that takes input and feeds the out to an inner rate P-controller. 
+With this structure the drone is easier (possible) to fly. An angle PID and rate PID were both tested 
+before the cascaded combination without result. 
+
+---------- Something about the code -----------------
+The Robot Control Library found here, http://strawsondesign.com/docs/librobotcontrol/, is used a lot. 
+We were given a code structure with most of the threads for logging data present. We expanded this with a flight 
+thread to handle the flying and ros is implemented as its own thread.
+
+---------- Plot controller data -----------------------
+When the drones were being tuned it was necessary to see the data from the controller. The controller_<something>.log file
+contains the data from your run. After a run move the file to the directory tools/ and then run the python code controller_plot.py 
+to see how the controller behaved. (We did’t have Matlab sadly)
+
+
+------------------------------------------------------------------------------
+------------------- Balrog UTV -----------------------------------------------
+------------------------------------------------------------------------------
+
+---- Balrog Raspberry Pi ------------------------------------
+There are 2 system images for the Pi with different progress status. 
+The first one is the current one existing on the SD card:
+
+1.	OS: Raspbian (NO GUI)
+Has all files from previous CDIO and the program can be run.
+Does not have ROS and it has to be installed from source which is a troublesome and time consuming process. 
+It is begun though and is on stage “2.1.2 Building the catkin workspace” in the downloading from source guide on ROS.org.
+
+2.	OS: Ubuntu (NO GUI)
+Doesn’t have all files that the other has but is thought to have all relevant files to run the program but the program can’t be run.
+This, because the bins aren’t executable in this operating system. They have to remade from source and the source-files took a while to find. 
+They exist on the Sauron Pi in the directory minesweeper/. So an attempt to make the files on the  Sauron Pi was made using the user manual
+from CDIO 2017, page 15 <Insert link here>. But an error occured because “apt” is busy because for some reason it updates continuasly and 
+here our time ran out. Has ROS.
+
+---- How to change system image ------------------------
+See: tools/clone_SD_card.txt
+
+----- Some useful knowledge ----------------------------
+We got the impression that something is wrong with the functionality of connecting to network via WiFi. 
+We never got it to connect to anything via WiFi and we tried a lot of tweaking in files. The current method
+is to connect it to BALROG_ROUTER via ethernet cable.
+The previous CDIO run startup_root.sh and more on boot using /etc/rc.local so it can be relevant to look in that file.
+
+----- To find the Pi ip if using the BALROG_ROUTER ------------
+Connect your computer to the BALROG_ROUTER
+A window should appear with the headline RT-N12C1. If you have no internet connected to the router you can click 
+the link “Click here to go to the setup page”. Uname: admin, pssw: admin.
+Go to “Network Map” then “Clients:” (in the middle of the screen) and then you can see which devices that are connected 
+and their ip. The pi is seen as “raspberry” if using image 1.
+
+----- How to ssh into the pi ------------------------------------
+If using image 1 the username is “pi” and if image 2 the username is “ubuntu”. If the ip is 192.168.1.79 then in the terminal type:
+$ ssh pi@192.168.1.79
+
