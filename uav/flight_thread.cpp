@@ -1,3 +1,18 @@
+/**
+ * flight_thread.cpp
+ * 
+ * This thread handles flying the quadcopter based on input from various sources.
+ * All control signals related to flying will be calculated and sent to the ESCs here.
+ * Input from the hand controller will also be passed through this thread.
+ * 
+ * Asymmetric synchronization is used to make sure that new control signals are calculated every time the imu is read.
+ * The semaphore IMU_sem is used for this.
+ * 
+ * Attention! 
+ * If dsm data is read from the log file, then the drone is impossible to control because of a 5 sec time delay.
+ * Reasons for this?
+ * Could be "too many uses of get_latest_dsm"? 
+*/
 #include <stdio.h>
 #include <unistd.h>
 extern "C"

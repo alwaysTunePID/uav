@@ -10,5 +10,4 @@ sleep 13s
 source devel/setup.bash
 chown root:root ~/catkin_ws/devel/lib/uav_pkg/uav
 chmod u+s ~/catkin_ws/devel/lib/uav_pkg/uav
-rosrun uav_pkg uav _param:=c
-
+rosrun uav_pkg uav _param:=c #use m insted of c to disable the controller
