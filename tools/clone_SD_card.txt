@@ -1,0 +1,18 @@
+How to create an image of an SD-card
+
+Insert the SD card. Find it with:
+$ sudo fdisk -l
+
+Unmount the device, for example:
+$ sudo umount /dev/sdb
+
+Now to create an image of the device:
+$ sudo dd if=/dev/sdb of=~/beaglebone.img bs=4M status=progress
+
+To reinstall image do the same but switch places of the
+directories in the dd command.
+
+To mount your image-file on your computer:
+$ fdisk -l /path/to/image
+Do some multiplication with the result, in this case the product was 65536:
+$ mount -o loop,offset=65536 Pi.img /mnt 
