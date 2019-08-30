@@ -18,6 +18,8 @@ Beaglebone blue			debian			temppwd
 ----------------------------------------------------------------------------
 ------------ Beaglebone Blue Quadcopter ------------------------------------
 ----------------------------------------------------------------------------
+---- What can the Quadcopter do right now? ----
+It can fly via input thorugh the radio controller.
 
 ---- How to get started ------------------------
 Connect a battery or USB cable to power the Beagleboard on
@@ -54,8 +56,10 @@ Power on the radio controller.
 If the there is a solid light on the dsm receiver (the thing at the back of the quadcopter, 
 that’s keeps flashing a light if not connected), then it is all good. 
 
+Put the quadcopter on a flat surface and DON NOT move it while the "IMU wake up process"
+
 Then typ:
-$ roscore & 
+$ roscore & (wait until text prints and hit enter when you see "[/rosout]")
 $ cd catkin_ws
 $ ./run_uav.sh  	(If you want to disable the controller then change c to m in the run_uav.sh file )
 
@@ -64,11 +68,14 @@ Arm the quadcopter by moving the SA-switch up. Otherwise the motors wont move.
 SB-switch up, sets the quadcopter in DECENT-mode which should take the vehicle back to earth 
 (on a good day that is, since it’s a very simple feature that only sets the throttle to a constant value) 
 
+
 Fly away.
 
 ---------- Compile your files -----------------------
 If you made changes or done something such that you need to compile the files again, move to the catkin_ws directory 
 and run “catkin_make”.
+
+DONT forget to set the clock see "How to get started"
 
 ---------- Something about the controller -----------
 The control loop that handles stabilizing the drone while in the air consists of two cascaded controllers. 
@@ -90,6 +97,11 @@ to see how the controller behaved. (We did’t have Matlab sadly)
 ------------------------------------------------------------------------------
 ------------------- Balrog UTV -----------------------------------------------
 ------------------------------------------------------------------------------
+---- What can the Balrog do right now? --------------------
+It can be run around with the radio controller. Just power everything on, a switch at the back and connect all cables.
+(It is apparently important ot connect the camera)
+Power on the radio contorller and go. 
+
 
 ---- Balrog Raspberry Pi ------------------------------------
 There are 2 system images for the Pi with different progress status. 
@@ -108,7 +120,10 @@ from CDIO 2017, page 15 <Insert link here>. But an error occured because “apt” i
 here our time ran out. Has ROS.
 
 ---- How to change system image ------------------------
-See: tools/clone_SD_card.txt
+See: tools/clone_SD_card.txt 
+
+The system images can be found in a folder named CDIO2019 under Sommarjobb somewhere at SAAB.
+Ask someone the seems appropriate. 
 
 ----- Some useful knowledge ----------------------------
 We got the impression that something is wrong with the functionality of connecting to network via WiFi. 
