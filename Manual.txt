@@ -89,6 +89,21 @@ The Robot Control Library found here, http://strawsondesign.com/docs/librobotcon
 We were given a code structure with most of the threads for logging data present. We expanded this with a flight 
 thread to handle the flying and ros is implemented as its own thread.
 
+---------- Binding the DSM (Radio Controller) -------
+The radio controller can only be bound to one drone at the time. (The dsm receiver is the the antennas at the drones.)
+
+To rebind you need to ssh into the drone you want to bind and
+$ rc_bind_dsm 
+Follow the instructions and select mode 5.
+When the dsm reciever is flashing rapidly you can turn on the radio controller with the the grey "BIND" button (on the
+orange dsm sender) held in. Release when the dsm reciever stops flashing.
+
+It can also be necessary to calibrate which is done with
+$ rc_calibrate_dsm
+And test it with
+$ rc_test_dsm
+These type of programs are listed at the Robot Control Library webpage.
+
 ---------- Plot controller data -----------------------
 When the drones were being tuned it was necessary to see the data from the controller. The controller_<something>.log file
 contains the data from your run. After a run move the file to the directory tools/ and then run the python code controller_plot.py 
@@ -124,8 +139,8 @@ Has ROS.
 ---- How to change system image ------------------------
 See: tools/clone_SD_card.txt 
 
-The system images can be found in a folder named CDIO2019 under Sommarjobb somewhere at SAAB.
-Ask someone the seems appropriate. 
+The system images can be found in a directory named CDIO2019 somewhere at SAAB.
+Ask someone that seems appropriate. 
 
 ----- Some useful knowledge ----------------------------
 We got the impression that something is wrong with the functionality of connecting to network via WiFi. 
