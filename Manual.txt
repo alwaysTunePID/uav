@@ -14,12 +14,28 @@ Beaglebone blue			debian			temppwd
 -------------------------------------------------------------------------
 
 
+------ List of hardware needed for quadcopters -----------------------------------
+- 2x Quadcopters
+- 4x 1800 mAh 11.1V 45C Batteries for quadcopters
+- Lipo battery voltage tester
+- Radio controller (big and silver) for the quadcopters (+ charging cable)
+- 6 sets of spare propelleres
+- Lipo battery charger	   
+
+------ List of hardware needed for Balrog  ----------------------------------------
+- 1x Balrog
+- Raspberry Pi from Sauron with source files 
+- Charger for Balrog
+(- Computer that we didnt use)
+- Radio controller
+- Router
 
 ----------------------------------------------------------------------------
 ------------ Beaglebone Blue Quadcopter ------------------------------------
 ----------------------------------------------------------------------------
 ---- What can the Quadcopter do right now? ----
-It can fly via input thorugh the radio controller.
+It can fly via input thorugh the radio controller. The drones has ROS running 
+as a thread.
 
 ---- How to get started ------------------------
 Connect a battery or USB cable to power the Beagleboard on
@@ -73,9 +89,9 @@ Fly away.
 
 ---------- Compile your files -----------------------
 If you made changes or done something such that you need to compile the files again, move to the catkin_ws directory 
-and run “catkin_make”.
+and run “ $ catkin_make ". If you want to remove old build files, run " $ catkin_make clean ".
 
-DONT forget to set the clock see "How to get started"
+DONT forget to set the clock, see "How to get started"
 
 ---------- Something about the controller -----------
 The control loop that handles stabilizing the drone while in the air consists of two cascaded controllers. 
@@ -87,6 +103,9 @@ before the cascaded combination without result.
 The Robot Control Library found here, http://strawsondesign.com/docs/librobotcontrol/, is used a lot. 
 We were given a code structure with most of the threads for logging data present. We expanded this with a flight 
 thread to handle the flying and ros is implemented as its own thread.
+
+The files of most intrest can be found in ~/catkin_ws/src/uav_pkg/src and we used WinSCP to transfer files from 
+Windows to the beagleBone.
 
 ---------- Plot controller data -----------------------
 When the drones were being tuned it was necessary to see the data from the controller. The controller_<something>.log file
@@ -123,7 +142,7 @@ here our time ran out. Has ROS.
 See: tools/clone_SD_card.txt 
 
 The system images can be found in a folder named CDIO2019 under Sommarjobb somewhere at SAAB.
-Ask someone the seems appropriate. 
+Ask someone that seems appropriate. 
 
 ----- Some useful knowledge ----------------------------
 We got the impression that something is wrong with the functionality of connecting to network via WiFi. 
@@ -141,4 +160,10 @@ and their ip. The pi is seen as “raspberry” if using image 1.
 ----- How to ssh into the pi ------------------------------------
 If using image 1 the username is “pi” and if image 2 the username is “ubuntu”. If the ip is 192.168.1.79 then in the terminal type:
 $ ssh pi@192.168.1.79
+
+
+
+
+
+
 
