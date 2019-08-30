@@ -1,3 +1,10 @@
+/**
+ * ros_thread.cpp
+ * 
+ * Thread that takes care of ROS. 
+ *   
+ * 
+*/
 #include "ros_thread.h"
 extern "C"{ 
 #include <robotcontrol.h>

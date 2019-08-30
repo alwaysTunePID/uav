@@ -1,3 +1,12 @@
+/**
+ * dsm_thread.cpp
+ * 
+ * Thread that could be used for connection with the radio controller.
+ * It didnt work as intended because of time delay when reading dsm data from the log file.
+ * it is therefore only used to log the dsm data and NOT for sending output signals for the ESCs.
+ * 
+ * 
+*/
 #include "dsm_thread.h"
 #include <stdio.h>
 extern "C"

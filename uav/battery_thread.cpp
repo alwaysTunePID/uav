@@ -1,3 +1,10 @@
+/**
+ * battery_thread.cpp
+ * 
+ * Samples the current battery voltage.
+ * I dont know if it works as intended, might be some error when reading the value. 
+ * 
+*/
 #include <stdio.h>
 #include "battery_thread.h"
 #include "io_thread.h"

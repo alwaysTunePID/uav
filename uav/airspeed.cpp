@@ -1,3 +1,11 @@
+/**
+ * airspeed.cpp
+ * 
+ * For calculating the air speed of the quadcopter. Might be useful for navigation.
+ * (But now it is not working as it wont compile if the thread is used)
+ * 
+ * NEEDS TO BE FIXED (If you want to use it that is)
+*/
 extern "C"
 { 
 #include <robotcontrol.h>

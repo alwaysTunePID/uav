@@ -1,3 +1,9 @@
+/**
+ * telemetry.cpp
+ * 
+ * I dont know if this is being used right now...
+ * 
+*/
 #include <stdio.h>
 extern "C"
 { 

@@ -1,3 +1,8 @@
+/**
+ * log_thread.cpp
+ * 
+ * Write things in the log files. 
+*/
 #include "log_thread.h"
 extern "C"
 { 

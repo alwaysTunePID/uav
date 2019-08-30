@@ -1,3 +1,12 @@
+/**
+ * uav.cpp
+ * 
+ * This file manages the threads.
+ * 
+ * The airspeed, telemetry and gps threads dosent work/not used for other reasons at the moment. The gps  might work if a gps device is
+ * connected.
+*/
+
 #include <stdio.h>
 #include <unistd.h>
 extern "C"
@@ -126,8 +135,7 @@ int main(int argc, char *argv[])
     rc_set_state(RUNNING);
 
     //start threads
-
-	
+    
      if(rc_pthread_create(&i2c_thread, i2c_thread_func, (void*)&IMU_sem, SCHED_OTHER, 0)){
         fprintf(stderr, "ERROR: Failed to start I2C sampler thread\n");
         return -1;

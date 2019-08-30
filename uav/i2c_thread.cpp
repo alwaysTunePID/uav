@@ -1,3 +1,9 @@
+/**
+ * i2c_thread.cpp
+ * 
+ * Samples the i2c bus (IMU and barometer, if the barometer would have been used) 
+ * This is because one need to keep functions which sample the i2c buss in the same thread.
+*/
 extern "C"
 { 
 #include <robotcontrol.h>
@@ -8,7 +14,7 @@ extern "C"
 // Global variables for IMU/DMP
 static int i2c_thread_ret_val;
 
-// need to keep functions which sample the i2c buss in the same thread
+
 int i2c_main(sem_t *IMU_sem){
 
     //if (initialize_baro()) return -1;

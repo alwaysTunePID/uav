@@ -5,13 +5,15 @@
  * All control signals related to flying will be calculated and sent to the ESCs here.
  * Input from the hand controller will also be passed through this thread.
  * 
- * Asymmetric synchronization is used to make sure that new control signals are calculated every time the imu is read.
+ * Asymmetric synchronization is used to make sure that new control signals are calculated every time the IMU has new data.
  * The semaphore IMU_sem is used for this.
  * 
  * Attention! 
  * If dsm data is read from the log file, then the drone is impossible to control because of a 5 sec time delay.
  * Reasons for this?
  * Could be "too many uses of get_latest_dsm"? 
+ * 
+ * 
 */
 #include <stdio.h>
 #include <unistd.h>
@@ -30,18 +32,6 @@ extern "C"
 #include "uav.h"
 #include "controller_data_thread.h"
 
-/*
-
-This thread is intended to handle the flying of the drone. All control signals related to the flying will be calculated here. 
-The ESC control signals will be set from here. Input from the controller will be passed through here.
-
-
-Attention! 
-If dsm data is read from the log file, then the drone is impossible to control because of a 5 sec time delay.
-Reasons for this?
-Could be "too many uses of get_latest_dsm"? 
-
-*/
 #define DESCEND_THR 0.58		// With 0.6 it landed gracefully (but bonced on the floor)
 #define MIN_ERROR 0.3			// Integral will be set to 0 if error < MIN_ERROR
 #define MAX_I 50				// Maximum integral output
@@ -56,7 +46,7 @@ Could be "too many uses of get_latest_dsm"?
 #define K_pr_r 0.0014 // Constant for proportional part of rate pid for roll (could be higher)
 #define K_pr_y 0.0046 // Constant for proportional part of rate pid for yaw
 
-// angle pid
+// angle pi
 #define K_pa_p 6.0 // Constant for proportional part of angle pid for pitch
 #define K_pa_r 6.0 // Constant for proportional part of angle pid for roll
 
@@ -71,12 +61,12 @@ static esc_input_t esc_input;
 // misc variables
 static int flight_thread_ret_val;						 
 static bool armed = false;
-static int const_alt_active = 0;	// Switch to 1 if you want to keep constant altitude. UNUSED
+static int const_alt_active = 0;	// Switch to 1 if you want to keep constant altitude. UNUSED AND NOT WORKING FEATURE 
 
 // altitude controller reference signal. UNUSED
 // double alt_ref = 0.0;
 
-// Used for updating PID parameters. UNUSED
+// Used for updating PID parameters without recompiling. UNUSED
 // double input_K = 1.0;
 // double input_D = 1.0;
 // double input_Y = 1.0;
@@ -106,6 +96,10 @@ void LP_filter(double input, double* average, double factor){
 	*average = input*factor + (1-factor)* *average;  // ensure factor belongs to  [0,1]
 }
 
+/**
+ * Since the IMU drifts quite a lot the first 30 second, we need to compensate for this.
+ * 
+*/
 void calibrate_IMU(sem_t* IMU_sem, double* mean_pitch_offset, double* mean_roll_offset, double* mean_g) {
 	calibration_sleep();
 
@@ -152,7 +146,7 @@ void load_offset(double* mean_pitch_offset, double* mean_roll_offset, double* me
 	}
 
 	fscanf(calibration_file, "%lf %lf %lf", mean_pitch_offset, mean_roll_offset, mean_g);
-	
+
 	fclose(calibration_file);
 
 	printio("Pitch offset:\t\t%.4f", *mean_pitch_offset);
@@ -323,10 +317,6 @@ int flight_main(sem_t* IMU_sem){
 	
 	u_int64_t time_since_wake = 0;
 
-	// int samples = 0;
-	// double mean_z_speed = 0;
-	// double mean_z_acc = 0;
-
 	double mean_roll_offset = 0;
 	double mean_pitch_offset = 0;
 	double mean_g = 0;
@@ -334,8 +324,8 @@ int flight_main(sem_t* IMU_sem){
 	double pitch_ref = 0;
 	double roll_ref = 0;
 	double yaw_ref = 0;
-	// double z_speed = 0;
-	double thr = 0; // normalized throttle
+
+	double thr = 0; 
 
 	bool sent_arming_error = false;
 	bool sent_dsm_prevent_descent_waring = false;
