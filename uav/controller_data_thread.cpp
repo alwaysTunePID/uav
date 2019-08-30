@@ -1,3 +1,10 @@
+/**
+ * controller_data_thread.cpp
+ * 
+ * Thread that logs the key signals and values used by the controller. 
+ * This is useful when trying to design a new controller or tune one.
+ * 
+*/
 #include "controller_data_thread.h"
 #include <stdlib.h>
 #include <stdio.h>

@@ -1,3 +1,9 @@
+/**
+ * sys_log.cpp 
+ * 
+ * 
+*/
+
 #include <stdio.h>
 #include <stdarg.h>
 #include "sys_log.h"

@@ -1,13 +1,17 @@
+/**
+ * imu.cpp 
+ * 
+ * Unclear if this works at all.
+ * But it should write sampled IMU values into a log file and allow for the lateset reeading
+ * to requested from other threads. Also signals to the controller when new data is present. 
+ * 
+*/
 #include <stdio.h>
 #include <semaphore.h>
 #include "imu.h"
 #include "circular_buffer.h"
 #include "io_thread.h"
 #define IMU_BUFFER_SIZE   10
-
-
-// Unclear if this works at all
-
 
 rc_mpu_config_t mpu_config; 
 rc_mpu_data_t  	mpu_data; // Declare a Motion processing data structure, this is used to receive data from imu interrupt

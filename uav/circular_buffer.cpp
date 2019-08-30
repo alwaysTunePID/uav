@@ -1,3 +1,10 @@
+/**
+ * circular_buffer.cpp
+ *
+ * Used when collecting data, like sampling the IMU.
+ * 
+ * 
+*/
 #include "circular_buffer.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -63,7 +70,6 @@ void cbuffer_disable_print_outs(cbuffer_handle_t cbuf)
     cbuf->print = false;
 
 }
-
 
 int cbuffer_free(cbuffer_handle_t cbuf)
 {

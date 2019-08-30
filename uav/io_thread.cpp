@@ -1,3 +1,9 @@
+/**
+ * io_thread.cpp
+ * 
+ * Writes information about the system status in the terminal.
+ * 
+*/
 #include "io_thread.h"
 #include "imu.h"
 #include "battery_thread.h"
@@ -122,6 +128,7 @@ void buffer(char* message) {
 }
 
 void set_armed(bool in_armed) {
+    
     armed = in_armed;
 }
 

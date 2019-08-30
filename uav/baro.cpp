@@ -1,3 +1,12 @@
+/**
+ * baro.cpp
+ * 
+ * Thread for collecting data from the barometer.
+ * 
+ * Doesnt work (as intended) right now. 
+ * 
+ * 
+*/
 #include "baro.h"
 #include "circular_buffer.h"
 #include "io_thread.h"

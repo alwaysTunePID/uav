@@ -1,3 +1,9 @@
+/**
+ * gps_thread.cpp
+ * 
+ * Used to collect data from a gps device and write it to a log file. However, no such device
+ * was ever tested and we have no idea if it actually works. 
+*/
 #include <stdio.h>
 extern "C"
 { 
